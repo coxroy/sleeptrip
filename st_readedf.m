@@ -1,5 +1,14 @@
 function data_edf=st_readedf(edf_file,varargin)
 
+%handle situation of (nested) cells
+while iscell(edf_file)
+    edf_file=edf_file{:};
+end
+
+if isfolder(edf_file)
+
+
+end
 %construct FT data struct
 data_edf=struct;
 
@@ -32,7 +41,11 @@ time_vect = linspace(0, numSamples-1, numSamples).'/srate;
 %---get data
 fprintf('reading data...\n')
 edf_data=edfread(edf_file);
+if iscell(edf_data{1,chanInds})
 edf_data=cell2mat(edf_data{:,chanInds})';
+else
+edf_data=edf_data{:,chanInds}';
+end
 
 if ~iscell(useChans)
     useChans={useChans};
