@@ -2336,11 +2336,13 @@ end
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function cleanup_cb_hhyp(hObject, eventdata, varargin)
-h_main = ft_getopt(varargin, 'h_main');
-h = getparent(h_main);
-opt = getappdata(h, 'opt');
-opt.changedBGcolor3 = false;
-setappdata(h, 'opt', opt);
+try %if score_browser was closed before hypnogram, h_main is not available
+    h_main = ft_getopt(varargin, 'h_main');
+    h = getparent(h_main);
+    opt = getappdata(h, 'opt');
+    opt.changedBGcolor3 = false;
+    setappdata(h, 'opt', opt);
+end
 delete(hObject);
 end
 
