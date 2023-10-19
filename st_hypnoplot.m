@@ -268,8 +268,8 @@ cfg.plotlightson            = ft_getopt(cfg, 'plotlightson', 'yes');
 cfg.plotindicatorssoutsidescoringtimes = ft_getopt(cfg, 'plotindicatorssoutsidescoringtimes', 'yes');
 cfg.plotunknown             = ft_getopt(cfg, 'plotunknown', 'yes');
 cfg.plotexcluded            = ft_getopt(cfg, 'plotexcluded', 'yes');
-cfg.plotcycles            = ft_getopt(cfg, 'plotcycles', 'yes');
-cfg.plotepisodes            = ft_getopt(cfg, 'plotepisodes', 'yes');
+cfg.plotcycles            = ft_getopt(cfg, 'plotcycles', 'no');
+cfg.plotepisodes            = ft_getopt(cfg, 'plotepisodes', 'no');
 
 cfg.sleeponsetdef           = ft_getopt(cfg, 'sleeponsetdef', 'N1_XR');
 cfg.classiccolor            = ft_getopt(cfg, 'classiccolor', [0 0 0]);
