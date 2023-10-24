@@ -25,6 +25,8 @@ end
 fileData={};
 for chan_i=1:length(edfChannelFiles)
     channelName=edfChannelFiles(chan_i).name;
+    
+    %read
     fprintf('reading file %s\n',channelName)
     file_data=st_readedf(fullfile(edf_folder,channelName));
 
