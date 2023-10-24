@@ -142,7 +142,6 @@ dataformat      = ft_getopt(varargin, 'dataformat');
 chanunit        = ft_getopt(varargin, 'chanunit');
 timestamp       = ft_getopt(varargin, 'timestamp', false); % return Neuralynx NSC timestamps instead of actual data
 password        = ft_getopt(varargin, 'password', struct([]));
-delcompr        = ft_getopt(varargin, 'delcompr', true);
 
 % this allows blocking reads to avoid having to poll many times for online processing
 blocking         = ft_getopt(varargin, 'blocking', false);  % true or false
@@ -220,19 +219,18 @@ end
 
 % read the header if it is not provided
 if isempty(hdr)
-  hdr = ft_read_header(filename, 'headerformat', headerformat, 'chanindx', chanindx, 'checkmaxfilter', checkmaxfilter, 'password', password);
-  if isempty(chanindx)
-    chanindx = 1:hdr.nChans;
-  end
-else
-  % set the default channel selection, which is all channels
-  if isempty(chanindx)
-    chanindx = 1:hdr.nChans;
-  end
-  % test whether the requested channels can be accomodated
-  if min(chanindx)<1 || max(chanindx)>hdr.nChans
-    ft_error('FILEIO:InvalidChanIndx', 'selected channels are not present in the data');
-  end
+  % note that the chanindx option should not be passed here, see https://github.com/fieldtrip/fieldtrip/pull/2048
+  hdr = ft_read_header(filename, 'headerformat', headerformat, 'checkmaxfilter', checkmaxfilter, 'password', password, 'cache', cache);
+end
+
+% set the default channel selection, which is all channels
+if isempty(chanindx)
+  chanindx = 1:hdr.nChans;
+end
+
+% test whether the requested channels can be accomodated
+if min(chanindx)<1 || max(chanindx)>hdr.nChans
+  ft_error('FILEIO:InvalidChanIndx', 'selected channels are not present in the data');
 end
 
 % read until the end of the file if the endsample is "inf"
@@ -388,10 +386,6 @@ switch dataformat
   case 'AnyWave'
     dat = read_ah5_data(filename, hdr, begsample, endsample, chanindx);
     
-  case 'axograph'
-      
-    [dat, orig_hdr] = read_axograph(datafile, true, chanindx);
-
   case 'bci2000_dat'
     % this requires the load_bcidat mex file to be present on the path
     ft_hastoolbox('BCI2000', 1);
@@ -1013,6 +1007,18 @@ switch dataformat
     end
     dat = dat(chanindx, :);
     
+  case 'matlab'
+    % read the data structure from a MATLAB file
+    % it should either contain a numerical "dat" array, or a FieldTrip data structure according to FT_DATATYPE_RAW
+    w = whos(matfile(filename));
+    if any(strcmp({w.name}, 'dat'))
+      dat = loadvar(filename, 'dat');
+      dat = dat(chanindx, begsample:endsample);
+    elseif any(strcmp({w.name}, 'data')) || length(w)==1
+      data = loadvar(filename, 'data');
+      dat = ft_fetch_data(data, 'begsample', begsample, 'endsample', endsample, 'chanindx', chanindx);
+    end
+    
   case 'mayo_mef30'
     hdr.sampleunit = 'index';
     dat = read_mayo_mef30(filename, password, sortchannel, hdr, begsample, endsample, chanindx);
@@ -1295,6 +1301,7 @@ switch dataformat
     for i=1:hdr.nChans
       v=double(hdr.orig.orig.(hdr.label{i}));
       v=v*hdr.orig.orig.(char(strcat(hdr.label{i},'_BitResolution')));
+      v=v/hdr.orig.orig.(char(strcat(hdr.label{i},'_Gain')));
       dat(i,:)=v(begsample:endsample); %channels sometimes have small differences in samples
     end
     
@@ -1369,6 +1376,10 @@ switch dataformat
   case 'artinis_oxy4'
     ft_hastoolbox('artinis', 1);
     dat = read_artinis_oxy4(filename, hdr, begsample, endsample, chanindx);
+    
+  case 'artinis_oxy5'
+    ft_hastoolbox('artinis', 1);
+    dat = read_artinis_oxy5(filename, hdr, begsample, endsample, chanindx);
     
   case 'plexon_ds'
     dat = read_plexon_ds(filename, hdr, begsample, endsample, chanindx);
@@ -1572,10 +1583,11 @@ switch dataformat
     blocksize = hdr.orig.header.SamplePeriodsPerBlock;
     begtrial = floor((begsample-1)/blocksize) + 1;
     endtrial = floor((endsample-1)/blocksize) + 1;
-    dat = read_tmsi_poly5(filename, hdr.orig, begtrial, endtrial);
+    dat = read_tmsi_poly5(filename, hdr.orig, begtrial, endtrial, chanindx);
     offset = (begtrial-1)*blocksize;
     % select the desired samples and channels
-    dat = dat(chanindx, (begsample-offset):(endsample-offset));
+    %dat = dat(chanindx, (begsample-offset):(endsample-offset));
+    dat = dat(:, (begsample-offset):(endsample-offset));
     
   case 'videomeg_aud'
     dat = read_videomeg_aud(filename, hdr, begsample, endsample);
@@ -1603,45 +1615,10 @@ switch dataformat
       ft_hastoolbox('yokogawa', 1); % error if it cannot be added
       dat = read_yokogawa_data(filename, hdr, begsample, endsample, chanindx);
     end
-    
-	case 'zmax_edf'
-    % this reader is largely similar to the one for edf
-    % it concatenates edfs with fixed file names of identical length and
-    % sample rate with one channel each, all in the same folder. 
-    % the chanindx represents the alphabetical order of the edf filnames in
-    % that folder.
-    
-    if isempty(chanindx)
-        chanindx = 1:numel(hdr.label);
-    end
-    
-    if max(chanindx) > hdr.nChans
-        ft_error('FILEIO:InvalidChanIndx', 'selected channels are not present in the data');
-    else
-        channelLabels = hdr.label(chanindx);
-        dat = [];
-        for iCh = 1:numel(channelLabels)
-            channelLabel = channelLabels{iCh};
-            [path,~,ext] = fileparts(filename);
-            dat = cat(1,dat, ...
-                read_edf(fullfile(path, [channelLabel ext]), hdr, begsample, endsample, 1, true));
-        end
-    end
-    
-  case 'blackrock_nsx'
-    % use the NPMK toolbox for the file reading
-    ft_hastoolbox('NPMK', 1);
-    
-    % ensure that the filename contains a full path specification,
-    % otherwise the low-level function fails
-    [p,f,e] = fileparts(filename);
-    if ~isempty(p)
-      % this is OK
-    elseif isempty(p)
-      filename = which(filename);
-    end
-    orig = openNSx(filename, 'duration', [begsample endsample], 'channels', chanindx);
-    dat  = double(orig.Data);
+
+  case 'yorkinstruments_hdf5'
+    dat = h5read(filename,['/acquisitions/default/data/']);
+    dat = dat(chanindx,begsample:endsample);
 
   otherwise
     if exist(dataformat, 'file')

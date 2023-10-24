@@ -80,7 +80,6 @@ for nrec=1:length(Records),
     if floor(Mode/2)==1
         for k=1:EDF.NS,
             DAT.Record(nrec*EDF.SPR(k)+(1-EDF.SPR(k):0),k)=S(1:EDF.SPR(k),k);
-
         end
     else
         DAT.Record(nrec*RecLen+(1-RecLen:0),:)=S;

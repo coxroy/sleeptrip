@@ -1,11 +1,11 @@
-function sidecar = bids_sidecar(filename, suffix)
+function sidecar = bids_sidecar(filename, suffix, extension)
 
 % BIDS_SIDECAR will search for corresponding BIDS sidecar files that go together with
 % a specific data file. This function respects the inheritance rules and will also
 % search higher up in the directory structure.
 %
 % Use as
-%   sidecar = bids_sidecar(filename, sidecar, retval)
+%   sidecar = bids_sidecar(filename, sidecar, extension)
 % where filename refers to a BIDS data file and suffix is a string that refers to the
 % specific sidecar file. To read the json sidecar corresponding to the data itself,
 % you can keep the suffix empty. In that case the suffix (e.g., meg or eeg) will
@@ -24,7 +24,9 @@ function sidecar = bids_sidecar(filename, suffix)
 %   'optodes'
 %   'events'
 %
-% In case both a tsv and a json sidecar file are present, the tsv file will be returned.
+% You can specify the file extension (tsv or json) to be returned. When not specified
+% and in case both a tsv and a json sidecar file are present that match the suffix,
+% the tsv file will be returned.
 %
 % See https://bids-specification.readthedocs.io/ for the specification and
 % http://bids.neuroimaging.io/ for background information.
@@ -56,6 +58,11 @@ if nargin<2
   suffix = [];
 end
 
+if nargin<3
+  % any extension is fine
+  extension = [];
+end
+
 if endsWith(filename, '.gz')
   % this applies to nifti files that have been gzipped
   [p, f, x] = fileparts(filename(1:end-3));
@@ -65,7 +72,7 @@ else
 end
 
 % get the key-value pairs that comprise the file name
-entities = strsplit(f, '_');
+entities = split(f, '_');
 
 if isempty(suffix)
   % the suffix, i.e. the part just before the file extension, is the datatype
@@ -121,6 +128,11 @@ end
 % start with an empty return value
 sidecar = [];
 
+if ~isempty(extension)
+  % only search for the specified extension
+  filelist = filelist(endsWith(filelist', extension));
+end
+
 % if there is both a tsv and a json file for the desired sidecar, we want to return the tsv
 % sort them to get the tsv files first in the list, followed by the json files
 filelist = [filelist(endsWith(filelist', 'tsv')) filelist(endsWith(filelist', 'json'))];
@@ -128,7 +140,7 @@ filelist = [filelist(endsWith(filelist', 'tsv')) filelist(endsWith(filelist', 'j
 % we are searching for a file with the datatype as suffix and that ends with json
 for i=1:numel(filelist)
   [p, f, x] = fileparts(filelist{i});
-  tmp = strsplit(f, '_');
+  tmp = split(f, '_');
   % check the file extension, the suffix and the entities of each candidate file
   if ismember(x, {'.tsv', '.json'}) && strcmp(tmp{end}, suffix) && all(ismember(tmp(1:end-1), entities))
     ft_info('found matching BIDS sidecar ''%s''', filelist{i})

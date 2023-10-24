@@ -1,4 +1,3 @@
-
 function write_brainvision_eeg(filename, hdr, dat, event)
 
 % WRITE_BRAINVISION_EEG exports continuous EEG data to a BrainVision *.eeg
@@ -11,7 +10,6 @@ function write_brainvision_eeg(filename, hdr, dat, event)
 % See also READ_BRAINVISION_EEG, READ_BRAINVISION_VHDR, READ_BRAINVISION_VMRK
 
 % Copyright (C) 2007-2014, Robert Oostenveld
-% Copyright (C) 20019, Frederik D. Weber edit the writing so it includes other output formats like INT_16 and INT_32
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
@@ -35,10 +33,6 @@ if nargin<4
   event = [];
 end
 
-if ~isfield(hdr,'brainvision_outformat')
-    hdr.brainvision_outformat = 'float32';
-end
-
 if length(size(dat))>2
   ntrl  = size(dat,1);
   nchan = size(dat,2);
@@ -55,19 +49,8 @@ end
 % this is the only supported data format
 hdr.DataFormat      = 'BINARY';
 hdr.DataOrientation = 'MULTIPLEXED';
-switch hdr.brainvision_outformat
-    case 'float32'
-        hdr.BinaryFormat    = 'IEEE_FLOAT_32';
-        hdr.resolution      = ones(size(hdr.label));  % no additional calibration needed, since float32
-    case 'int16'
-        hdr.BinaryFormat    = 'INT_16';
-        temp_res_microVolt = 0.1;
-        hdr.resolution      = ones(size(hdr.label))*temp_res_microVolt;  %
-    case 'int32'
-        hdr.BinaryFormat    = 'INT_32';
-        temp_res_microVolt = 0.1;
-        hdr.resolution      = ones(size(hdr.label))*temp_res_microVolt;  % 
-end
+hdr.BinaryFormat    = 'IEEE_FLOAT_32';
+hdr.resolution      = ones(size(hdr.label));  % no additional calibration needed, since float32
 
 % determine the filenames
 [p, f, x] = fileparts(filename);
@@ -86,24 +69,10 @@ fid = fopen_or_error(datafile, 'wb', 'ieee-le');
 if length(size(dat))>2
   ft_warning('writing segmented data as if it were continuous');
   for i=1:ntrl
-  	switch hdr.brainvision_outformat
-   		case 'float32'
-        	fwrite(fid, squeeze(dat(i,:,:)), hdr.brainvision_outformat);
-        case 'int16'
-            fwrite(fid, squeeze( int16( (1/temp_res_microVolt) * dat(i,:,:) )), hdr.brainvision_outformat);
-        case 'int32'
-            fwrite(fid, squeeze( int32( (1/temp_res_microVolt) * dat(i,:,:) )), hdr.brainvision_outformat);
-        end
+    fwrite(fid, squeeze(dat(i,:,:)), 'float32');
   end
 else
-	switch hdr.brainvision_outformat
-    	case 'float32'
-            fwrite(fid, dat, hdr.brainvision_outformat );
-        case 'int16'
-            fwrite(fid, int16( (1/temp_res_microVolt) * dat), hdr.brainvision_outformat );
-        case 'int32'
-            fwrite(fid, int32( (1/temp_res_microVolt) * dat), hdr.brainvision_outformat );
-    end
+  fwrite(fid, dat, 'float32');
 end
 
 fclose(fid);
@@ -122,29 +91,17 @@ fprintf(fid, 'DataFormat=%s\r\n',        hdr.DataFormat);
 fprintf(fid, 'DataOrientation=%s\r\n',   hdr.DataOrientation);
 fprintf(fid, 'NumberOfChannels=%d\r\n',  hdr.nChans);
 % Sampling interval in microseconds
-fprintf(fid, 'SamplingInterval=%d\r\n',  round(1e6/hdr.Fs));
+fprintf(fid, 'SamplingInterval=%d\r\n',  1e6/hdr.Fs);
 fprintf(fid, '\r\n');
 fprintf(fid, '[Binary Infos]\r\n');
 fprintf(fid, 'BinaryFormat=%s\r\n',      hdr.BinaryFormat);
-
-if strcmp(hdr.brainvision_outformat,'int16') || strcmp(hdr.brainvision_outformat,'int32') 
-    fprintf(fid, 'UseBigEndianOrder=NO\r\n');
-end
-
 fprintf(fid, '\r\n');
 fprintf(fid, '[Channel Infos]\r\n');
 % Each entry: Ch<Channel number>=<Name>,<Reference channel name>,<Resolution in microvolts>,<Future extensions>...
 % Fields are delimited by commas, some fields might be omitted (empty).
 % Commas in channel names should be coded as "\1", but are not supported here
 for i=1:hdr.nChans
-    switch hdr.brainvision_outformat
-	    case 'float32'
-	        fprintf(fid, 'Ch%d=%s,,%g\r\n', i, hdr.label{i}, hdr.resolution(i));
-	    case 'int16'
-	        fprintf(fid, 'Ch%d=%s,,%g,µV\r\n', i, hdr.label{i}, hdr.resolution(i));
-	    case 'int32'
-	        fprintf(fid, 'Ch%d=%s,,%g,µV\r\n', i, hdr.label{i}, hdr.resolution(i));
-	end
+  fprintf(fid, 'Ch%d=%s,,%g\r\n', i, hdr.label{i}, hdr.resolution(i));
 end
 fclose(fid);
 
@@ -180,10 +137,3 @@ for i=1:length(event)
   fprintf(fid, 'Mk%d=%s,%s,%s,%s,%s\n', i, type, descr, pos, siz, chan);
 end
 fclose(fid);
-
-
-
-
-
-
-
