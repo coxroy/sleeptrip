@@ -31,8 +31,8 @@ for chan_i=1:length(edfChannelFiles)
     file_data=st_readedf(fullfile(edf_folder,channelName));
 
     %fix for handling identical channel names
-    [~,filebase]=fileparts(channelName);
-    file_data.label=strcat(file_data.label, '-', filebase); %name as "channel name-file name"
+    %[~,filebase]=fileparts(channelName);
+    %file_data.label=strcat(file_data.label, '-', filebase); %name as "channel name-file name"
 
     fileData{end+1}=file_data;
 
