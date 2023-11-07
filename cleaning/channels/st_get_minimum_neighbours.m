@@ -73,17 +73,25 @@ elec=cfg.elec;
 chanpos=elec.chanpos;
 numChan=length(elec.label);
 
+%all-to-all distances
 dist = zeros(numChan,numChan);
 for i=1:numChan
     dist(i,:) = sqrt(sum((chanpos(1:numChan,:) - repmat(chanpos(i,:), numChan, 1)).^2,2))';
 end
+
+%for every channel (column), get sorted distances to other channels
 sortDist=sort(dist,1);
-sortDist(1,:)=[];%remove first row of zeros
+sortDist(1,:)=[];%remove first row of zeros (self-distance)
+
 maxDistToNeighb=max(sortDist,[],2);
-if minNumNeighb<=numChan-2
-    neighbDist=maxDistToNeighb(minNumNeighb+1);
+if minNumNeighb<=numChan-1
+    if minNumNeighb<length(maxDistToNeighb)
+        neighbDist=maxDistToNeighb(minNumNeighb+1); %+1 because ft_prepare_neighbours uses distance "exclusive"
+    else %every channel is a neighbor
+        neighbDist=inf;
+    end
 else
-    neighbDist=inf;
+    neighbDist=0; %leads to zero neighbours
 end
 
 %set up neighborhood structure

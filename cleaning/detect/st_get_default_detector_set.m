@@ -260,12 +260,71 @@ else
     ft_warning('creation of detector similar failed: no neighbourhood structure\n')
 
 end
+%%
+cfg_detector=[];
+cfg_detector.label='zmaxslow';
+
+%ft
+cfg_detector.ft.lpfilter      =  'yes';
+cfg_detector.ft.lpfreq        = 4;
+
+%st
+cfg_detector.st.method='neighbours';
+cfg_detector.st.metric='correlation';
+cfg_detector.st.elec=cfg.elec;
+cfg.minchanforneighbors=2;
+neighbours=st_get_default_neighbours(cfg);
+cfg_detector.st.neighbours=neighbours;
+
+
+cfg_detector.st.thresholddirection='above';
+cfg_detector.st.thresholdvalue  = 0.6; % artifact threshold: > corrthresh
+cfg_detector.st.channelthreshold =0.5; % artifact threshold: > chanpropthresh
+
+cfg_detector.st.mergeduration=30; %merge artifacts if within this range (in seconds). Note: long merge window to avoid channels switching between good/bad every window.
+
+if ~isempty(neighbours)
+    all_detectors_cfg{end+1}=cfg_detector;
+else
+    ft_warning('creation of detector zmaxslow failed: no neighbourhood structure\n')
+
+end
+
+%%
+cfg_detector=[];
+cfg_detector.label='zmaxeye';
+
+%ft
+cfg_detector.ft.lpfilter      =  'yes';
+cfg_detector.ft.lpfreq        = 4;
+
+%st
+cfg_detector.st.method='neighbours';
+cfg_detector.st.metric='correlation';
+cfg_detector.st.elec=cfg.elec;
+cfg.minchanforneighbors=2;
+neighbours=st_get_default_neighbours(cfg);
+cfg_detector.st.neighbours=neighbours;
+
+
+cfg_detector.st.thresholddirection='below';
+cfg_detector.st.thresholdvalue  = -0.6; % artifact threshold: > corrthresh
+cfg_detector.st.channelthreshold =0.5; % artifact threshold: > chanpropthresh
+
+cfg_detector.st.mergeduration=30; %merge artifacts if within this range (in seconds). Note: long merge window to avoid channels switching between good/bad every window.
+
+if ~isempty(neighbours)
+    all_detectors_cfg{end+1}=cfg_detector;
+else
+    ft_warning('creation of detector zmaxslow failed: no neighbourhood structure\n')
+
+end
 
 %%
 
 %select requested (and possible) detectors
-if ~strcmp(cfg.include,'all') 
-   
+if ~strcmp(cfg.include,'all')
+
     %determine which ones we have
     [detectorAvailable,idx]=ismember(cfg.include,cellfun(@(X) X.label,all_detectors_cfg,'UniformOutput',false));
     all_detectors_cfg=all_detectors_cfg(idx(detectorAvailable));

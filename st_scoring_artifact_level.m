@@ -98,15 +98,23 @@ if numArtifactSegment<numScoringSegment % trim scoring if needed
     fprintf('Removing %i final epochs from scoring\n',numScoringSegment-numArtifactSegment)
     scoring_artifact_level.epochs=scoring_artifact_level.epochs(1:numArtifactSegment);
     scoring_artifact_level.excluded=scoring_artifact_level.excluded(1:numArtifactSegment);
-    scoring_artifact_level.prob=scoring_artifact_level.prob(:,1:numArtifactSegment);
-    scoring_artifact_level.numbers=scoring_artifact_level.numbers(1:numArtifactSegment);
+    if isfield(scoring_artifact_level,'prob')
+        scoring_artifact_level.prob=scoring_artifact_level.prob(:,1:numArtifactSegment);
+    end
+    if isfield(scoring_artifact_level,'numbers')
+        scoring_artifact_level.numbers=scoring_artifact_level.numbers(1:numArtifactSegment);
+    end
 elseif numArtifactSegment>numScoringSegment %extend scoring by repeating last epoch info
 
     fprintf('Adding %i epochs to end of scoring by repeating final epoch\n',numArtifactSegment-numScoringSegment)
     scoring_artifact_level.epochs(end+1:numArtifactSegment)=scoring_artifact_level.epochs(end);
     scoring_artifact_level.excluded(end+1:numArtifactSegment)= scoring_artifact_level.excluded(end);
-    scoring_artifact_level.prob(:,end+1:numArtifactSegment)=repmat(scoring_artifact_level.prob(:,end),[1 numArtifactSegment-numScoringSegment]);
-    scoring_artifact_level.numbers(end+1:numArtifactSegment)= scoring_artifact_level.numbers(end);
+    if isfield(scoring_artifact_level,'prob')
+        scoring_artifact_level.prob(:,end+1:numArtifactSegment)=repmat(scoring_artifact_level.prob(:,end),[1 numArtifactSegment-numScoringSegment]);
+    end
+    if isfield(scoring_artifact_level,'numbers')
+        scoring_artifact_level.numbers(end+1:numArtifactSegment)= scoring_artifact_level.numbers(end);
+    end
 end
 
 %mark epochs for exclusion

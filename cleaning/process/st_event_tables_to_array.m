@@ -69,7 +69,7 @@ end
 %---set defaults--
 cfg_artifacts.segment_length  = ft_getopt(cfg_artifacts, 'segment_length', 5);%5 s window
 cfg_grid.segment_length=cfg_artifacts.segment_length; %copy over to grid
-cfg_artifacts.merge_detectors=ft_getopt(cfg_artifacts,'include_detectors','all');
+cfg_artifacts.merge_detectors=ft_getopt(cfg_artifacts,'merge_detectors','all');
 
 %extract event tables of requested artifact types
 detectorLabelsAvailable=fieldnames(cfg_artifacts.artifacts.raw_events)';

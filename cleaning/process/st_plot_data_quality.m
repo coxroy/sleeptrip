@@ -55,6 +55,9 @@ ft_checkconfig(cfg.artifacts,'required',{'summary'});
 %get defaults
 cfg.title  = ft_getopt(cfg, 'title', '');
 fig_title=cfg.title;
+while iscell(fig_title)
+    fig_title=fig_title{1};
+end
 cfg.style  = ft_getopt(cfg, 'style', 'full');
 
 %get the grid
