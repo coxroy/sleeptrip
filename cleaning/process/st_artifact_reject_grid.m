@@ -86,7 +86,7 @@ end
 %take from cfg, otherwise default set above
 cfg_artifacts.segmentrejectthresh = ft_getopt(cfg_artifacts, 'segmentrejectthresh', segmentrejectthresh);
 
-reject_grid=repmat(mean(artifact_grid,1)>=cfg_artifacts.segmentrejectthresh,[numChan 1]);
+reject_grid=repmat(mean(artifact_grid,1)>=cfg_artifacts.segmentrejectthresh,[numChan 1]); %reject if greater than OR equal
 accept_grid=~reject_grid;
 
 %assign to cfg

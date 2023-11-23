@@ -74,9 +74,6 @@ ft_checkconfig(cfg_detector_set,'required',{'number','label','detectors','elec'}
 fprintf([functionname ' function initialized\n'])
 
 
-%initialize cell array of eventTables
-%eventTables={};
-
 [numChan, numSample]=size(data.trial{1});
 srate=data.fsample;
 
@@ -214,6 +211,14 @@ for detector_i=1:cfg_detector_set.number
                 chanChanMetric=corr(dat_seg');
                 chanChanMetric(~connectivity)=nan;
 
+            elseif strcmp(cfg_st.metric,'correlation_minamp')
+                %channel correlation
+                chanChanMetric=corr(dat_seg');
+                chanChanMetric(~connectivity)=nan;
+                if ~all(any(abs(dat_seg)>cfg_st.thresholdvalue2,2))
+                    chanChanMetric(:)=NaN;
+                end
+
             elseif strcmp(cfg_st.metric,'maxabsdiff')
                 %channel max magnitude of difference wave
                 chanChanMetric=maxAbsDiff(dat_seg');
@@ -230,7 +235,6 @@ for detector_i=1:cfg_detector_set.number
 
             %find channels meeting threshold
             if strcmp(cfg_st.thresholddirection,'above')
-                %dat_bad=temp_data>cfg_st.thresholdvalue;
                 chanchan_bad=chanChanMetric>cfg_st.thresholdvalue;
             elseif strcmp(cfg_st.thresholddirection,'below')
                 chanchan_bad=chanChanMetric<cfg_st.thresholdvalue;

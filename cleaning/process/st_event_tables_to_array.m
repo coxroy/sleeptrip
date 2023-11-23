@@ -68,17 +68,19 @@ end
 
 %---set defaults--
 cfg_artifacts.segment_length  = ft_getopt(cfg_artifacts, 'segment_length', 5);%5 s window
-cfg_grid.segment_length=cfg_artifacts.segment_length; %copy over to grid
 cfg_artifacts.merge_detectors=ft_getopt(cfg_artifacts,'merge_detectors','all');
+
+
+cfg_grid.segment_length=cfg_artifacts.segment_length; %copy over to grid
 
 %extract event tables of requested artifact types
 detectorLabelsAvailable=fieldnames(cfg_artifacts.artifacts.raw_events)';
-if strcmp(cfg_artifacts.merge_detectors,'all') %select artifacts from all detectors
+if strcmp(cfg_artifacts.merge_detectors,'all') 
+    %select artifacts from all detectors
     includeDetectorLabels=detectorLabelsAvailable;
-else %include only artifacts from requested detectors
-
+else 
+    %include only artifacts from requested detectors
     includeDetectorLabels=intersect(detectorLabelsAvailable,cfg_artifacts.merge_detectors);
-
 end
 
 
@@ -98,6 +100,9 @@ chanLabels=cfg_artifacts.data.label;
 numChan=length(chanLabels);
 
 cfg_grid.channel_number=numChan;
+
+%ignore designated segments 
+cfg_artifacts.segment_ignore=ft_getopt(cfg_artifacts, 'segment_ignore', false(1,numSeg));
 
 
 %initalize logical artifact matrix
@@ -120,10 +125,15 @@ for artType_i=1:numArtifactTypes
 
         seg_inds=segStart:segEnd;
 
-        artifact_grid_by_type(artType_i,chan_ind,seg_inds)=artifact_grid_by_type(artType_i,chan_ind,seg_inds) | true;
+        artifact_grid_by_type(artType_i,chan_ind,seg_inds)= true;
     end
 
+  
+
 end
+
+  %mask with segments to ignore
+    artifact_grid_by_type=artifact_grid_by_type & ~permute(repmat(cfg_artifacts.segment_ignore,[numArtifactTypes,1,numChan]),[1 3 2]);
 
 %merge all remaining event types
 artifact_grid_merged=squeeze(any(artifact_grid_by_type,1));

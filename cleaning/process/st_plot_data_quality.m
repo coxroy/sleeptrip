@@ -393,8 +393,10 @@ elseif hasScoring
         'ColorOrder',stage_label_colors,...
         'Visible','off')
 
-    text(mean(xDat,2),repmat(text_y_coor,[1 length(stage_labels)]),legend_labels,...
-        'FontSize',fsize_legend,'HorizontalAlignment','center','FontWeight','bold','Color','w');
+    try %fix for "?" only
+        text(mean(xDat,2),repmat(text_y_coor,[1 length(stage_labels)]),legend_labels,...
+            'FontSize',fsize_legend,'HorizontalAlignment','center','FontWeight','bold','Color','w');
+    end
 
     ylim([0.5 1.5])
 
