@@ -6,31 +6,33 @@ SleepTrip offers a set of functions for fully automated artifact detection and r
 * ease-of-use and customization: setting up a cleaning pipeline should be relatively straightforward using default settings, while also allowing extensive customization of detection and repair settings
 * cleaning routines should accommodate both low- and high-density EEG setups, with acceptable processing times and memory demands even for 256-channel EEG
 
-**Important**: although the current approach appears to work satisfactorily in many cases, no claim is made that it performs "better" (however defined) than other algorithms or manual/visual cleaning, or that it performs well under all circumstances. Rather, given limitations of other algorithms and the time-consuming nature of manual cleaning, the current approach offers a fast (and reproducible) alternative that can accelerate sleep EEG analysis.
+**Important**: although the current approach works satisfactorily in many cases, it is not guaranteed that it performs "better" (however defined) than other algorithms or manual/visual cleaning, or that it performs well under all circumstances. Rather, given limitations of other algorithms and the time-consuming nature of manual cleaning, the current approach offers a fast (and reproducible) alternative that can accelerate sleep EEG analysis.
 
 # Cleaning Overview
 To clean your data the following are needed:
 * EEG data (continuous, not epoched)
-* channel coordinates
-* sleep score information (optional, but recommended)
+* channel/electrode coordinates
+* sleep scoring information
 
 Conceptually, the following steps are performed:
 
-### 1. Independent Component Analysis (ICA) [optional] 
+### 1. Independent Component Analysis (ICA) [experimental] 
 * ICA identifies and removes components reflecting non-neural activity (eye movements, ECG, line noise)
  
 ### 2. Artifact Detection
 * detect continuous artifacts of various kinds on a channel-by-channel basis
 
-Default detectors:
-1. excessive amplitude
-2. low-frequency noise
-3. high-frequency noise
-4. signal jumps
-5. flatlines (including amplifier saturation)
-6. deviating channel
+At present, the following default detectors are available:
+1. highamp: excessive amplitude
+2. lowfreq: low-frequency (0.3-15 Hz) noise
+3. highfreq: high-frequency (60-120 Hz) noise
+4. jump: signal jumps
+5. flatline: flatline (including amplifier saturation)
+6. lowamp: implausibly low amplitude
+7. deviant: channel very dissimilar from neigbors
+8. similar: channel very similar to neigbors
 
-* convert continuous artifacts to a discrete channel-by-segment grid (segment length: 5 s), where each channel-segment element indicates the presence/absence of artifact 
+* convert continuous artifacts to a discrete channel-by-segment grid (default segment length: 5 s), where each channel-segment element indicates the presence/absence of artifact 
 
 * apply various rules to discrete artifact grid to specify:
 1. rejection grid (segments to reject entirely). Most downstream SleepTrip functions can be instructed to ignore these rejected segments.
