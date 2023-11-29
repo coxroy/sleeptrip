@@ -12,7 +12,7 @@ function cfg_detector_set=st_get_default_detector_set(cfg)
 %
 % Optional configuration parameters:
 %     cfg.include   = cell array of strings, with names of each detector to
-%     include. (default: 'all' [string])
+%     include. (default: 'default_eeg' [string])
 %
 % The following detector names are recognized:
 %   'highamp'
@@ -86,7 +86,7 @@ end
 
 %---input checks and defaults----
 ft_checkconfig(cfg,'required',{'elec','fsample'});
-cfg.include  = ft_getopt(cfg, 'include', 'all');
+cfg.include  = ft_getopt(cfg, 'include', 'default_eeg');
 
 fprintf([functionname ' function initialized\n']);
 
@@ -329,12 +329,28 @@ end
 %%
 
 %select requested (and possible) detectors
-if ~strcmp(cfg.include,'all')
+if strcmp(cfg.include,'all')
+    all_detectors_cfg=all_detectors_cfg;
+else
+    if strcmp(cfg.include,'default_eeg')
 
-    %determine which ones we have
-    [detectorAvailable,idx]=ismember(cfg.include,cellfun(@(X) X.label,all_detectors_cfg,'UniformOutput',false));
+        useDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'deviant' 'similar'};
+
+    elseif strcmp(cfg.include,'default_zmax')
+        useDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'zmaxslow' 'zmaxeye'}; %exclude neighborhood-based detectors
+
+    else %user-specified list
+        useDetectors=cfg.include;
+
+    end
+    
+    %determine which ones we could create for current data
+    [detectorAvailable,idx]=ismember(useDetectors,cellfun(@(X) X.label,all_detectors_cfg,'UniformOutput',false));
     all_detectors_cfg=all_detectors_cfg(idx(detectorAvailable));
+
 end
+
+
 
 %function for combining individual detector cfgs
 cfg_detector_set=st_combine_detectors(all_detectors_cfg);
