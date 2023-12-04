@@ -7,16 +7,14 @@ tutorialDataFolder=fullfile(tutorialFolder,'tutorial_data');
 
 if ~isfolder(tutorialDataFolder)
 
-
-
     % dataset doi (resolves to latest version)
     initialDOI='10.5281/zenodo.10256036';
     initialURL=['https://zenodo.org/doi/' initialDOI];
 
-    % determine where doi resolves to
+    % determine where DOI resolves to
     redirectedURL = webread(initialURL);
 
-    % Extract the DOI from the redirected URL
+    % Extract DOI from the redirected URL
     doiPattern = '10.\d+\/zenodo.\d+';
     doi = regexp(redirectedURL, doiPattern, 'match');
     if isempty(doi)
@@ -24,7 +22,7 @@ if ~isfolder(tutorialDataFolder)
     end
     doi = doi{1};
 
-    %extrac doi number
+    %extract doi number
     doiSimplePattern='\d+$'; %final numbers
     doiSimple=regexp(doi,doiSimplePattern,'match');
     doiSimple=doiSimple{1};
