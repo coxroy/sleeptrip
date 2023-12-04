@@ -36,4 +36,7 @@ realtime/bin/*/test_waitdat
 
 external/npmk/NPMKverChecker.dat
 
+tutorial/tutorial_data
+tutorial/tutorial_data.zip
+
 *.github/*
