@@ -112,7 +112,7 @@ figure_col=white;
 %assign colors to artifact types and build colormaps
 default_col=white;
 artifact_type_labels={'basic','spatial exp.','temporal exp.'};
-artifact_cols=[dark_gray;light_brown; brown];
+artifact_cols=[dark_gray;magenta; brown];
 reject_label={'REJECT'};
 reject_col=red;
 
@@ -211,6 +211,7 @@ detectNames(strcmp(detectNames,'BASIC'))={'basic'};
 detectNames(strcmp(detectNames,'spatial expansion'))={'spatial exp.'};
 detectNames(strcmp(detectNames,'temporal expansion'))={'temporal exp.'};
 
+detectNames=strrep(detectNames,'_','\_');
 detectStr= cellfun(@(X) [num2str(X,'%.1f') '%'],detectVals,'UniformOutput',false);
 
 artifactDetails=[detectNames detectStr];
@@ -236,21 +237,18 @@ allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold' [num2str(100*cfg.channel
 insert_ind=find(strcmp(allDetails(:,1),'ANY'));
 allDetails=[allDetails(1:insert_ind-1,:) ; {'threshold' [num2str(100*cfg.badchannelthresh,'%.1f') '%']} ;allDetails(insert_ind:end,:)];
 
-
-
-
 stringNames=allDetails(:,1);
 
 %fontsize: standard unless individual detector
 detectFontSize=num2cell(ones(size(allDetails,1),1)*fsize);
-detectFontSize(ismember(stringNames,[detector_labels 'threshold' 'threshold (raw)' 'threshold (true)' 'bad channels']))={fsize_small};
+detectFontSize(ismember(stringNames,[strrep(detector_labels,'_','\_') 'threshold' 'threshold (raw)' 'threshold (true)' 'bad channels']))={fsize_small};
 detectFontSize(ismember(stringNames,{'REJECT','REPAIR'}))={fsize};
 
 
-%color: black unless reject or repair
+%color: black for most
 detectFontColor=repmat({'k'},size(allDetails,1),1);
-detectFontColor(ismember(stringNames,{'REJECT'}))={red};
-detectFontColor(ismember(stringNames,{'REPAIR'}))={magenta};
+detectFontColor(ismember(stringNames,{'REJECT'}))={reject_col};
+detectFontColor(ismember(stringNames,{'REPAIR'}))={orange};
 detectFontColor(ismember(stringNames,{'basic'}))={artifact_cols(1,:)};
 detectFontColor(ismember(stringNames,{'spatial exp.'}))={artifact_cols(2,:)};
 detectFontColor(ismember(stringNames,{'temporal exp.'}))={artifact_cols(3,:)};
@@ -258,7 +256,7 @@ detectFontColor(ismember(stringNames,{'temporal exp.'}))={artifact_cols(3,:)};
 
 %%line interval (before item): standard unless individual detector
 detectLineInt=num2cell(ones(size(allDetails,1),1)*ycoor_int); %standard
-detectLineInt(ismember(stringNames,[detector_labels 'threshold' 'threshold (raw)' 'threshold (true)' 'bad channels']))={ycoor_int_small}; %smaller for individual detectors
+detectLineInt(ismember(stringNames,[strrep(detector_labels,'_','\_') 'threshold' 'threshold (raw)' 'threshold (true)' 'bad channels']))={ycoor_int_small}; %smaller for individual detectors
 detectLineInt(ismember(stringNames,{'RECORDING DETAILS','ARTIFACT SUMMARY','ARTIFACT TYPES'}))={ycoor_int_big}; %larger for headers
 detectLineInt(1)={1};%except first item
 

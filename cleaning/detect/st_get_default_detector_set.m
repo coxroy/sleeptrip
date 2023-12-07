@@ -12,7 +12,7 @@ function cfg_detector_set=st_get_default_detector_set(cfg)
 %
 % Optional configuration parameters:
 %     cfg.include   = cell array of strings, with names of each detector to
-%     include. (default: 'default_eeg' [string])
+%     include. (default: 'default_eeg' [char])
 %
 % The following detector names are recognized:
 %   'highamp'
@@ -260,6 +260,43 @@ else
     ft_warning('creation of detector similar failed: no neighbourhood structure\n')
 
 end
+
+%%
+%--similar to neighbors detector (II)
+cfg_detector=[];
+cfg_detector.label='similar_global';
+
+%ft
+cfg_detector.ft.hpfilter     = 'yes';
+cfg_detector.ft.hpfreq       = 4;
+
+%st
+cfg_detector.st.method='neighbours';
+cfg_detector.st.metric='correlation';
+cfg_detector.st.elec=cfg.elec;
+
+%set up all-to-all neighbors
+cfg_nb=[];
+cfg_nb.elec  =  cfg.elec;
+cfg_nb.minimumneighbours = length(cfg.elec.label)-1;
+neighbours=st_get_minimum_neighbours(cfg_nb);
+
+cfg_detector.st.neighbours=neighbours;
+
+
+cfg_detector.st.thresholddirection='above';
+cfg_detector.st.thresholdvalue  = 0.8; % artifact threshold: < corrthresh
+cfg_detector.st.channelthreshold =0.9; % artifact threshold: > chanpropthresh
+cfg_detector.st.segmentlength=5;
+
+cfg_detector.st.mergeduration=5; %merge artifacts if within this range (in seconds). 
+
+if ~isempty(neighbours)
+    all_detectors_cfg{end+1}=cfg_detector;
+else
+    ft_warning('creation of detector similar2 failed: no neighbourhood structure\n')
+
+end
 %%
 cfg_detector=[];
 cfg_detector.label='zmaxslow';
@@ -334,7 +371,7 @@ if strcmp(cfg.include,'all')
 else
     if strcmp(cfg.include,'default_eeg')
 
-        useDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'deviant' 'similar'};
+        useDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'deviant' 'similar','similar_global'};
 
     elseif strcmp(cfg.include,'default_zmax')
         useDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'zmaxslow' 'zmaxeye'}; %exclude neighborhood-based detectors
@@ -343,7 +380,7 @@ else
         useDetectors=cfg.include;
 
     end
-    
+
     %determine which ones we could create for current data
     [detectorAvailable,idx]=ismember(useDetectors,cellfun(@(X) X.label,all_detectors_cfg,'UniformOutput',false));
     all_detectors_cfg=all_detectors_cfg(idx(detectorAvailable));

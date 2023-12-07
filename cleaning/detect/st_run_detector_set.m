@@ -242,8 +242,8 @@ for detector_i=1:cfg_detector_set.number
                 ft_error('unknown option for thresholddirection')
             end
 
-            %label segment bad if proportion of channels exceeds channelthreshold
-            badchannel(:,segment_i) = (sum(chanchan_bad,2)./numConnected)>cfg_st.channelthreshold;
+            %label segment bad if proportion of channels meets or exceeds channelthreshold
+            badchannel(:,segment_i) = (sum(chanchan_bad,2)./numConnected)>cfg_st.channelthreshold; %was > instead of >=
 
 
         end

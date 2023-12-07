@@ -7,6 +7,9 @@ function [data] = st_select_data(cfg, data)
 % Use as
 %   [data] = st_select_data(cfg, data)
 %
+%  GENERAL optional parameters:
+%   cfg.minlength = minimal trial duration needed for selection (default: 30 seconds)
+%
 %  When providing a scoring:
 %   cfg.scoring  = a scoring structure as defined in ST_READ_SCORING
 %
@@ -26,8 +29,7 @@ function [data] = st_select_data(cfg, data)
 %
 %   Additional selection options understood by FT_REDEFINETRIAL may also be passed.
 %
-%   GENERAL optional parameters:
-%   cfg.minlength = minimal trial duration needed for selection (default: 30 seconds)
+
 %
 % See also ST_READ_SCORING, ST_PREPROCESSING, ST_SCORING_ARTIFACT_LEVEL, FT_REDEFINETRIAL
 
