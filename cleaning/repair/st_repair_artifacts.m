@@ -57,8 +57,14 @@ ft_checkconfig(cfg_artifacts,'required',{'artifacts'});
 ft_checkconfig(cfg_artifacts.artifacts,'required',{'grid'});
 cfg_grid=cfg_artifacts.artifacts.grid;
 
+%default grid to use for repairing
+cfg_artifacts.gridtypeforrepair  = ft_getopt(cfg_artifacts, 'gridtypeforrepair', 'repair_grid');
+repair_grid=cfg_grid.(cfg_artifacts.gridtypeforrepair); %get the requested grid
 
-repair_grid=cfg_grid.repair_grid;
+%default repair method
+cfg_artifacts.repairmethod= ft_getopt(cfg_artifacts,'repairmethod','interpolate');
+repair_method=cfg_artifacts.repairmethod;
+
 [numChan,numSegments]=size(repair_grid);
 
 elec=cfg_artifacts.elec;
@@ -67,35 +73,49 @@ segmentLengthSample=round(cfg_grid.segment_length*data.fsample);
 
 repairSegment_inds=find(any(repair_grid,1));
 
-fprintf('repairing %i of %i segments\n',length(repairSegment_inds),numSegments)
+fprintf('repairing %i of %i segments using method %s\n',length(repairSegment_inds),numSegments,repair_method)
 
 for segment_i=repairSegment_inds
-    
-    %reimplementation of Fieldtrip's channel interpolation
-    badInds=find(repair_grid(:,segment_i)==1);
-    goodInds=find(repair_grid(:,segment_i)==0);
-    
-    repair  = eye(numChan, numChan); %set diagonals to 1
-    
-    for bad_i=1:length(badInds)
-        repair(badInds(bad_i),badInds(bad_i))=0; %set diagonal of bad chan to 0
-        distance = sqrt(sum((elec.chanpos(goodInds, :) - repmat(elec.chanpos(badInds(bad_i), :), length(goodInds), 1)).^2, 2));
-        
-        repair(badInds(bad_i), goodInds) = (1./distance);
-        repair(badInds(bad_i), goodInds) = repair(badInds(bad_i), goodInds) ./ sum(repair(badInds(bad_i), goodInds));
-    end
-    
+
     %get segment start/ends
     segment_start_sample=(segment_i-1)*segmentLengthSample+1;
     segment_end_sample=segment_i*segmentLengthSample;
-    
+
     %check we're inside the data range
     if segment_end_sample>data.sampleinfo(2)
         segment_end_sample=data.sampleinfo(2);
     end
-    
-    %replace original data with repair*original (matrix multiplication)
-    data.trial{1}(:,segment_start_sample:segment_end_sample)=repair*data.trial{1}(:,segment_start_sample:segment_end_sample);
+
+
+
+    badInds=find(repair_grid(:,segment_i)==1);
+    goodInds=find(repair_grid(:,segment_i)==0);
+
+    switch repair_method
+        case 'interpolate'
+
+            %reimplementation of Fieldtrip's channel interpolation
+
+            repair  = eye(numChan, numChan); %set diagonals to 1
+
+            for bad_i=1:length(badInds)
+                repair(badInds(bad_i),badInds(bad_i))=0; %set diagonal of bad chan to 0
+                distance = sqrt(sum((elec.chanpos(goodInds, :) - repmat(elec.chanpos(badInds(bad_i), :), length(goodInds), 1)).^2, 2));
+
+                repair(badInds(bad_i), goodInds) = (1./distance);
+                repair(badInds(bad_i), goodInds) = repair(badInds(bad_i), goodInds) ./ sum(repair(badInds(bad_i), goodInds));
+            end
+
+            %replace original data with repair*original (matrix multiplication)
+            data.trial{1}(:,segment_start_sample:segment_end_sample)=repair*data.trial{1}(:,segment_start_sample:segment_end_sample);
+
+        case 'replacewithzero'
+            data.trial{1}(badInds,segment_start_sample:segment_end_sample)=0;
+        case 'replacewithnan'
+            data.trial{1}(badInds,segment_start_sample:segment_end_sample)=NaN;
+
+    end
+
 end
 
 fprintf([functionname ' function finished\n']);

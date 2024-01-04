@@ -11,7 +11,7 @@ function cfg_artifacts=st_expand_artifacts_to_segments(cfg_artifacts)
 %     cfg.grid      = structure containing segment-based artifact grids
 %
 % Optional configuration parameters (subfield grid):
-%     cfg.badchannelthresh = minimum proportion of unrejected segments required to label all segments of a channel as artifact (default: 0.5)
+%     cfg.badchannelthresh = minimum proportion of unrejected segments required to label all segments of a channel as artifact (default: Inf [never expand segments])
 %
 % Output:
 %     cfg = artifact configuration with added artifact grids:
@@ -71,7 +71,7 @@ rejection_grid=cfg_grid.reject_grid;
 
 
 %take from cfg, otherwise default value
-cfg_artifacts.badchannelthresh = ft_getopt(cfg_artifacts, 'badchannelthresh', 0.5);%propotion of bad segments to label channel for full interpolation
+cfg_artifacts.badchannelthresh = ft_getopt(cfg_artifacts, 'badchannelthresh', Inf);%propotion of bad segments to label channel for full interpolation
 
 %segment-expanded grid:
 %1) take the accepted/unrejected part of the artifact grid (using first chan of rejection grid)

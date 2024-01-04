@@ -5,7 +5,7 @@ function cfg_artifacts=st_expand_artifacts_to_neighbours(cfg_artifacts)
 %   Non-artifactual channels are labeled artifactual when proportion of artifactual neighbouring channels >= channelexpandthresh.
 %   Lower values are more aggressive (a few artifactual neighbours will turn a clean channel artifactual [0: expand even if NO neighbours are artifacts (= always set to artifact)]),
 %   higher values are more conservative (many artifactual neighbours are needed to turn a clean channel artifactual [1: only expand if ALL neighbours are artifacts ; >1 (or Inf): never expand]).
-%   Note: expansion behavior depends on both cfg.grid.channelexpandthresh and cfg.neighbours: a sensible neighbourhood structure is required.
+%   Note: expansion behavior also depends on neighborhood structure (cfg.neighbours): a sensible neighbourhood structure is required.
 %
 % Use as:
 %     cfg=st_expand_artifacts_to_neighbours(cfg)
@@ -15,7 +15,7 @@ function cfg_artifacts=st_expand_artifacts_to_neighbours(cfg_artifacts)
 %     cfg.neighbours = neighbourhod structure
 %
 % Optional configuration parameters:
-%     cfg.channelexpandthresh = minimum proportion of artifactual neighbors required to expand artifacts (default: depending on number of channels, see below)
+%     cfg.channelexpandthresh = minimum proportion of artifactual neighbors required to expand artifacts (default: Inf [= never expand])
 %      
 % Output:
 %     cfg = artifact configuration with added artifact grids:
@@ -75,15 +75,15 @@ numSeg=cfg_grid.segment_number;
 
 %defaults for expanding artifacts to neighbors:
 %become less aggressive with fewer channels
-if numChan>128
-    channelexpandthresh=0.5;
-elseif numChan>10
-    channelexpandthresh=0.75;
-else %with very few channels, do not expand artifacts to neighbors
-    channelexpandthresh=inf;
-end
+% if numChan>128
+%     channelexpandthresh=0.5;
+% elseif numChan>10
+%     channelexpandthresh=0.75;
+% else %with very few channels, do not expand artifacts to neighbors
+%     channelexpandthresh=inf;
+% end
 
-cfg_artifacts.channelexpandthresh=ft_getopt(cfg_artifacts,'channelexpandthresh',channelexpandthresh);
+cfg_artifacts.channelexpandthresh=ft_getopt(cfg_artifacts,'channelexpandthresh',Inf);
 
 
 %get connectivity matrix (using neighbours)

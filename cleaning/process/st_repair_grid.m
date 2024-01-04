@@ -58,10 +58,10 @@ cfg_grid=cfg_artifacts.artifacts.grid;
 %determine repair matrix (= original or channel-expanded or segment-expanded artifacts, minus rejected)
 repair_grid=(cfg_grid.artifact_grid_merged | cfg_grid.artifact_grid_channel_expansion | cfg_grid.artifact_grid_segment_expansion) & ~cfg_grid.reject_grid;
 
-numChan=cfg_grid.channel_number;
-if numChan<3 %meaningless to repair
-    repair_grid(:)=false;
-end
+% numChan=cfg_grid.channel_number;
+% if numChan<3 %meaningless to repair
+%     repair_grid(:)=false;
+% end
 
 cfg_grid.repair_grid=repair_grid;
 

@@ -69,12 +69,13 @@ st_defaults
 
 %-----core function start---
 %---input checks and defaults----
-ft_checkconfig(cfg_detector_set,'required',{'number','label','detectors','elec'});
+ft_checkconfig(cfg_detector_set,'required',{'number','label','detectors','elec','scoring'});
 
 fprintf([functionname ' function initialized\n'])
 
+scoring=cfg_detector_set.scoring;
 
-[numChan, numSample]=size(data.trial{1});
+
 srate=data.fsample;
 
 %for every detector
@@ -89,6 +90,8 @@ for detector_i=1:cfg_detector_set.number
 
     %verify existence of fields
     ft_checkconfig(cfg_detector,'required',{'label','st'});
+    cfg_detector.stages=ft_getopt(cfg_detector,'stages',scoring.label);
+
 
     fprintf('detecting artifacts of type: %s\n',cfg_detector.label);
 
@@ -99,6 +102,7 @@ for detector_i=1:cfg_detector_set.number
     ft_checkconfig(cfg_st,'required',{'method'});
 
     %set required field defaults if not provided...
+
     cfg_st.minduration=ft_getopt(cfg_st,'minduration',0);
     cfg_st.maxduration=ft_getopt(cfg_st,'maxduration',inf);
     cfg_st.paddingduration=ft_getopt(cfg_st,'paddingduration',0);
@@ -110,18 +114,36 @@ for detector_i=1:cfg_detector_set.number
     padSample=round(cfg_st.paddingduration*srate);
     mergeSample=round(cfg_st.mergeduration*srate);
 
+    %%%
+    if isfield(cfg_detector,'stages')
+        cfg_select=[];
+        cfg_select.minlength=scoring.epochlength;
+        cfg_select.scoring=scoring;
+        cfg_select.stages=cfg_detector.stages;
+        cfg_select.usescoringexclusion='no'; %assume it is never desired to exclude epochs at this stage of processing
+        cfg_select.makecontinuous='yes';
+        cfg_select.resettime='no';
 
+        data_selected=st_select_data(cfg_select,data);
+    else
+        data_selected=data;
+
+    end
+
+    %get final channel/sample count
+    [numChan, numSample]=size(data_selected.trial{1});
+    %%%
 
     % -------extract FieldTrip cfg and perform processing if requested
     if isfield(cfg_detector,'ft')
         cfg_ft=cfg_detector.ft;
-        temp_data=ft_preprocessing(cfg_ft,data);
+        data_selected=ft_preprocessing(cfg_ft,data_selected);
     else
-        temp_data=data;
+        data_selected=data_selected;
     end
 
     %get as simple matrix
-    temp_data=temp_data.trial{1};
+    data_mat=data_selected.trial{1};
 
     %------perform SleepTrip processing
     if strcmp(cfg_st.method,'threshold')
@@ -133,28 +155,28 @@ for detector_i=1:cfg_detector_set.number
         %signal gradient if requested
         cfg_st.diff=ft_getopt(cfg_st,'diff','no');
         if strcmp(cfg_st.diff,'yes')
-            temp_data=diff(temp_data, 1, 2);
+            data_mat=diff(data_mat, 1, 2);
         end
 
         %rectify if requested
         cfg_st.abs=ft_getopt(cfg_st,'abs','no');
         if strcmp(cfg_st.abs,'yes')
-            temp_data=abs(temp_data);
+            data_mat=abs(data_mat);
         end
 
         %zscore if requested
         cfg_st.zscore=ft_getopt(cfg_st,'zscore','no');
         if strcmp(cfg_st.zscore,'yes')
-            temp_data=zscore(temp_data,0,2); %across columns
+            data_mat=zscore(data_mat,0,2); %across columns
         end
 
         %find samples meeting threshold
         if strcmp(cfg_st.thresholddirection,'above')
-            dat_bad=temp_data>cfg_st.thresholdvalue;
+            dat_bad=data_mat>cfg_st.thresholdvalue;
         elseif strcmp(cfg_st.thresholddirection,'below')
-            dat_bad=temp_data<cfg_st.thresholdvalue;
+            dat_bad=data_mat<cfg_st.thresholdvalue;
         elseif strcmp(cfg_st.thresholddirection,'between')
-            dat_bad=temp_data>cfg_st.thresholdvalue(1) & temp_data<cfg_st.thresholdvalue(2);
+            dat_bad=data_mat>cfg_st.thresholdvalue(1) & data_mat<cfg_st.thresholdvalue(2);
         else
             ft_error('unknown option for thresholddirection')
         end
@@ -202,7 +224,7 @@ for detector_i=1:cfg_detector_set.number
             end
 
             %segment data
-            dat_seg=temp_data(:,segment_start_sample:segment_end_sample);
+            dat_seg=data_mat(:,segment_start_sample:segment_end_sample);
 
 
             % functions for calculating all-to-all metrics
@@ -252,7 +274,7 @@ for detector_i=1:cfg_detector_set.number
         badTrial_inds=cellfun(@(X) find(X), mat2cell(badchannel,ones(numChan,1),numSegment),'uni',false);
 
         %get all start, end, and sample-duration values
-        start_end_sample=cellfun(@(X) [(X'-1)*segmentlength_sample+1 X'*segmentlength_sample repmat(segmentlength_sample,[size(X,2) 1])],...
+        start_end_sample=cellfun(@(X) [(X'-1)*segmentlength_sample+1 X'*segmentlength_sample ],...
             badTrial_inds,'uni',false);
     else
         ft_error('unknown option for method')
@@ -261,8 +283,9 @@ for detector_i=1:cfg_detector_set.number
 
     %---process start_end_sample times---
 
-    %select the events exceeding minDurationSample
-    start_end_sample=cellfun(@(X) X(X(:,3)>minDurationSample & X(:,3)<maxDurationSample,:),...
+
+    %select the events between minDurationSample and maxDurationSample
+    start_end_sample=cellfun(@(X) X((X(:,2)-X(:,1)+1)>minDurationSample & (X(:,2)-X(:,1)+1)<maxDurationSample,:),...
         start_end_sample,'uni',false);
 
     %pad with requested length padSample (not retaining original duration)
@@ -271,6 +294,21 @@ for detector_i=1:cfg_detector_set.number
 
     %merge overlapping intervals
     start_end_sample=cellfun(@mergeOverlappingIntervals,start_end_sample,'uni',false);
+
+
+    % [~,mem_ind]=ismember(data_selected.time{1}(1844970:1845053),data.time{1});
+    % data.time{1}(mem_ind)
+    %     data_break_num(tmp(:,1))~=data_break_num(tmp(:,2))
+    %     data_break_inds=find(abs(diff(data_selected.time{1})-(1/srate))>(1/srate))'; % index before break
+    % data_break_start_times=data_selected.time{1}(data_break_inds)';
+    % data_break_end_times=data_selected.time{1}(data_break_inds+1)';
+    %
+    % data_break_table=table(data_break_inds,data_break_start_times,data_break_end_times)
+
+
+
+
+
 
     %merge nearby events based on requested definition
     %Note: mergeSample+1 so intervals immediately adjacent also get merged
@@ -283,10 +321,59 @@ for detector_i=1:cfg_detector_set.number
     start_end_sample=cellfun(@(X) X(X(:,1)~=X(:,2),:),start_end_sample,'uni',false);
 
 
+    %---separate any cross-data-boundary events
+
+
+    %handle cross-data boundary events
+    data_break=[false abs(diff(data_selected.time{1})-(1/srate))>(1/srate)];
+    if any(data_break==1)
+
+        pre_break_sample_inds=find(data_break==1)-1;
+        post_break_sample_inds=pre_break_sample_inds+1;
+        data_break_num=cumsum(data_break)+1;
+
+        %the good ones:
+        start_end_sample_no_break=cellfun(@(X) X(data_break_num(X(:,1))==data_break_num(X(:,2)),:),...
+            start_end_sample,'uni',false);
+
+        %the cross-break ones:
+        start_end_sample_cross_break=cellfun(@(X) X(data_break_num(X(:,1))~=data_break_num(X(:,2)),:),...
+            start_end_sample,'uni',false);
+
+        minDurationCrossBreak=0.5;
+        minDurationCrossBreak_sample=round(minDurationCrossBreak*srate);
+
+        while ~all(cellfun(@isempty,start_end_sample_cross_break))
+
+            %segment each cross-break event belongs to (pre/post boundary)
+            break_indices=cellfun(@(X) [data_break_num(X(:,1)) data_break_num(X(:,2))],start_end_sample_cross_break,'uni',false);
+
+
+            errfun=@(x,y,z) double.empty(0,2);
+            start_end_sample_cross_break_fixed=cellfun(@(X,Y) [X(:,1) pre_break_sample_inds(Y(:,1));...
+                post_break_sample_inds(Y(:,1)) X(:,2) ],...
+                start_end_sample_cross_break,... %X
+                break_indices,... %Y
+                'uni',false,'ErrorHandler',errfun);
+
+            %select the events larger than minDurationCrossBreak (to prevent really brief events stemming form other side of boundary)
+            start_end_sample_cross_break_fixed=cellfun(@(X) X((X(:,2)-X(:,1)+1)>minDurationCrossBreak_sample,:),...
+                start_end_sample_cross_break_fixed,'uni',false);
+
+            %merge regular and fixed cross-boundary events
+            start_end_sample=cellfun(@(X,Y) [X;Y],start_end_sample_no_break,start_end_sample_cross_break_fixed,'uni',false);
+
+            %update the break events
+            start_end_sample_cross_break=cellfun(@(X) X(data_break_num(X(:,1))~=data_break_num(X(:,2)),:),...
+                start_end_sample,'uni',false);
+        end
+
+    end
+
     %-------build table----
     %add channel label
     start_end_sample=cellfun(@(X,Y) [num2cell(X) repmat({Y},[size(X,1) 1])],...
-        start_end_sample,data.label,'uni',false);
+        start_end_sample,data_selected.label,'uni',false);
 
     %convert to table, merge channels
     eventTable=cell2table(vertcat(start_end_sample{:}),'VariableNames',{'start' 'stop' 'channel'});
@@ -296,8 +383,11 @@ for detector_i=1:cfg_detector_set.number
     eventTable{eventTable{:,'stop'}>numSample,'stop'}=numSample;
 
     %convert to time in seconds (respecting time vector in data)
-    eventTable.start=(eventTable.start-1)./srate+data.time{1}(1);
-    eventTable.stop=(eventTable.stop-1)./srate+data.time{1}(1);
+    %eventTable.start=(eventTable.start-1)./srate+data_selected.time{1}(1);
+    %eventTable.stop=(eventTable.stop-1)./srate+data_selected.time{1}(1);
+
+    eventTable.start=data_selected.time{1}(eventTable.start)';
+    eventTable.stop=data_selected.time{1}(eventTable.stop)';
 
     %add duration
     eventTable.duration=eventTable.stop-eventTable.start+1/srate;
@@ -358,7 +448,8 @@ function start_end_sample=startEndSample(X)
 startSamples=find(diff([0 X])==1); %precede with 0 so data starting with artifact is caught
 endSamples= find(diff([X 0])==-1); %follow with 0 so data ending with artifact is caught
 
-start_end_sample=[startSamples' endSamples' (endSamples-startSamples)'+1]; %+1, so single sample has duration of 1
+start_end_sample=[startSamples' endSamples' ];
+%(endSamples-startSamples)'+1 %+1, so single sample has duration of 1
 end
 
 

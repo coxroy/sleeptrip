@@ -5,10 +5,10 @@
 %%
 %-----general setup----
 %perform basic setup of Matlab paths (only needs to be run once in a Matlab session)
-st_defaults 
+st_defaults
 
 %not all of SleepTrip's folders are added to the Matlab path to prevent potential conflicts. use "ft_hastoolbox" to add additional folders
-ft_hastoolbox('external/brewermap',1,1); %add brewermap color functions 
+ft_hastoolbox('external/brewermap',1,1); %add brewermap color functions
 
 %%
 %---------load data-----------
@@ -312,6 +312,8 @@ cfg_select=[];
 cfg_select.scoring=scoring_artifact_level;
 cfg_select.stages=useStage;
 cfg_select.minlength=minDataLength;
+cfg_select.makecontinuous='yes';
+cfg_select.resettime='no';
 
 %---create 3 data versions:-----
 %1) raw stage data
@@ -370,7 +372,7 @@ for data_ver_i=1:length(stage_data_verions)
     if data_ver_i==1
         legend(cfg_welch.channel)
         ylabel('log10(PSD) (\muV^2/Hz)')
-  
+
         xlabel('frequency (Hz)')
     end
 
@@ -380,7 +382,7 @@ end
 %--some plotting niceties--
 %background color
 fh=gcf;
-set(fh,'color','w') 
+set(fh,'color','w')
 %set all y limits the same
 allAxesInFigure = findall(fh,'type','axes');
 ylims_old=cell2mat(get(allAxesInFigure,'yLim'));

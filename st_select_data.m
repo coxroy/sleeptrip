@@ -29,7 +29,6 @@ function [data] = st_select_data(cfg, data)
 %
 %   Additional selection options understood by FT_REDEFINETRIAL may also be passed.
 %
-
 %
 % See also ST_READ_SCORING, ST_PREPROCESSING, ST_SCORING_ARTIFACT_LEVEL, FT_REDEFINETRIAL
 
@@ -72,8 +71,14 @@ st_defaults
 
 %---input checks and defaults----
 %ft_checkconfig(cfg,'required',{'scoring'});
+cfg.makecontinuous = ft_getopt(cfg, 'makecontinuous', 'no');
+cfg.resettime= ft_getopt(cfg,'resettime','yes');
 cfg.usescoringexclusion = ft_getopt(cfg, 'usescoringexclusion', 'yes');
 cfg.minlength = ft_getopt(cfg, 'minlength',30); %default 30s (typical epoch length)
+
+
+%first call ft_selectdata to allow selection of channels
+data=ft_selectdata(cfg,data);
 
 % ---check scoring and stages----
 hasScoring = false;
@@ -183,6 +188,13 @@ data_minutes=sum(diff(data_sampleinfo,[],2))/data.fsample/60;
 
 fprintf('selected %i trials with minimum trial length of %i s and combined duration of %.1f min\n',data_trials,cfg.minlength,data_minutes)
 
+
+%convert trial-based data to continuous
+if istrue(cfg.makecontinuous)
+    %note: cfg.resettime set above
+    data=st_trial_to_continuous(cfg,data);
+
+end
 fprintf([functionname ' function finished\n']);
 toc(ttic)
 memtoc(mtic)

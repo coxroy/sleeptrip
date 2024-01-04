@@ -24,8 +24,8 @@ function cfg_artifacts=st_process_detector_results(cfg_artifacts)
 %     cfg.keepeventtables = string (default: 'no')
 %     cfg.merge_detectors = cell array of strings, with names of each detector to include for computation of artifact grid. (default: 'all' [string])
 %     cfg.segment_length = length of grid segments in seconds (default: 5)
-%     cfg.channelexpandthresh = minimum proportion of artifactual neighbors required to expand artifacts (default: depending on number of channels, see ST_EXPAND_ARTIFACTS_TO_NEIGHBOURS)
-%     cfg.segmentrejectthresh = minimum proportion of channels required to label segment as rejected (default: depending on number of channels, see ST_ARTIFACT_REJECT_GRID)
+%     cfg.channelexpandthresh = minimum proportion of artifactual neighbors required to expand artifacts (default: Inf, see ST_EXPAND_ARTIFACTS_TO_NEIGHBOURS)
+%     cfg.segmentrejectthresh = minimum proportion of channels required to label segment as rejected (default: 0.5, see ST_ARTIFACT_REJECT_GRID)
 %     cfg.badchannelthresh = minimum proportion of unrejected segments required to label all segments of a channel as artifact (default: 0.5, see ST_EXPAND_ARTIFACTS_TO_SEGMENTS)
 %
 % Output:

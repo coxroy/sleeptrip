@@ -13,7 +13,7 @@ function cfg_artifacts=st_artifact_reject_grid(cfg_artifacts)
 %     cfg.grid      = structure containing segment-based artifact grids
 %
 % Optional configuration parameters (subfield grid):
-%     cfg.segmentrejectthresh = minimum proportion of artifactual channels required to label entire segment for rejection (default: depending on number of channels, see below)
+%     cfg.segmentrejectthresh = minimum proportion of artifactual channels required to label entire segment for rejection (default: 0.5)
 %
 % Output:
 %     cfg = artifact configuration with added artifact grids:
@@ -70,21 +70,21 @@ numChan=size(artifact_grid,1);
 
 %segment rejection:
 %become less aggressive with fewer channels
-if numChan>128
-    segmentrejectthresh=0.25; %proportion of artifactual channels to label segment for rejection
-elseif numChan>10
-    segmentrejectthresh=0.5;
-else
-    segmentrejectthresh=0.75;
-end
-
-%since we can't repair with too few channels, set threshold such that rejection occurs if any channel is bad
-if numChan<3 
-    segmentrejectthresh=1/numChan;
-end
+% if numChan>128
+%     segmentrejectthresh=0.25; %proportion of artifactual channels to label segment for rejection
+% elseif numChan>10
+%     segmentrejectthresh=0.5;
+% else
+%     segmentrejectthresh=0.75;
+% end
+% 
+% %since we can't repair with too few channels, set threshold such that rejection occurs if any channel is bad
+% if numChan<3 
+%     segmentrejectthresh=1/numChan;
+% end
 
 %take from cfg, otherwise default set above
-cfg_artifacts.segmentrejectthresh = ft_getopt(cfg_artifacts, 'segmentrejectthresh', segmentrejectthresh);
+cfg_artifacts.segmentrejectthresh = ft_getopt(cfg_artifacts, 'segmentrejectthresh', 0.5);
 
 reject_grid=repmat(mean(artifact_grid,1)>=cfg_artifacts.segmentrejectthresh,[numChan 1]); %reject if greater than OR equal
 accept_grid=~reject_grid;
