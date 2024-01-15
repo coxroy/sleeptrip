@@ -99,7 +99,6 @@ if strcmp(cfg.include,'all')
     requestedDetectors=allDetectors;
     %all_detectors_cfg=all_detectors_cfg;
 elseif strcmp(cfg.include,'default_eeg')
-
     requestedDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'deviant' 'similar','similar_global'};
 
 elseif strcmp(cfg.include,'default_zmax')
