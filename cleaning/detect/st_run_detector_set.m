@@ -415,6 +415,7 @@ cfg_artifacts.artifacts.raw_events=artifacts;
 cfg_artifacts.detector_set=cfg_detector_set;
 cfg_artifacts.data=rmfield(data,{'trial'}); %add data struct (without actual data)
 cfg_artifacts.elec=cfg_detector_set.elec;
+cfg_artifacts.scoring=scoring;
 
 
 % do the general cleanup and bookkeeping at the end of the function

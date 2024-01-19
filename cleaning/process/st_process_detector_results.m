@@ -21,7 +21,7 @@ function cfg_artifacts=st_process_detector_results(cfg_artifacts)
 % Optional configuration parameters:
 %     [main]
 %     cfg.neighbours = neighbourhood structure to be used by ST_EXPAND_ARTIFACTS_TO_NEIGHBOURS (default taken from ST_GET_DEFAULT_NEIGHBOURS)
-%     cfg.keepeventtables = string (default: 'no')
+%     cfg.keepeventtables = string (default: 'yes')
 %     cfg.merge_detectors = cell array of strings, with names of each detector to include for computation of artifact grid. (default: 'all' [string])
 %     cfg.segment_length = length of grid segments in seconds (default: 5)
 %     cfg.channelexpandthresh = minimum proportion of artifactual neighbors required to expand artifacts (default: Inf, see ST_EXPAND_ARTIFACTS_TO_NEIGHBOURS)
@@ -82,7 +82,7 @@ st_defaults
 
 %-----core function start---
 %---input checks and defaults----
-ft_checkconfig(cfg_artifacts,'required',{'artifacts','detector_set','data','elec'});
+ft_checkconfig(cfg_artifacts,'required',{'artifacts','detector_set','data','elec','scoring'});
 cfg_artifacts.keepeventtables  = ft_getopt(cfg_artifacts, 'keepeventtables', 'yes');
 
 fprintf([functionname ' function initialized\n'])
