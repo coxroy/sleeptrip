@@ -12,16 +12,20 @@ ft_hastoolbox('external/brewermap',1,1); %add brewermap color functions
 
 %%
 %---------load data-----------
-%Load the included mat file, containing:
+%Load one of the included mat files, containing:
 % -data: ~8 h of 64-channel data sampled at 250 Hz, referenced to linked mastoids, 0.5 Hz high-pass and 50 Hz notch-filtered.
 % -elec: corresponding channel locations
 % -scoring: corresponding sleep scores
+
+%select recording
+useRecording='1186_64'; % default example
+%useRecording='1053_64'; % other example
 
 %It is essential that the variables 'data', 'elec', and 'scoring' match each other (which is the case for these example data).
 
 
 prefix = fileparts(which('st_defaults'));
-loadPath=fullfile(prefix,'tutorial','tutorial_data','tutorial_data06','data_scoring_elec.mat');
+loadPath=fullfile(prefix,'tutorial','tutorial_data',useRecording,'data_scoring_elec.mat');
 load(loadPath)
 
 %to save space 'data' was originally saved with single precision (32 bit)
@@ -162,11 +166,11 @@ cfg_artifacts.artifacts.summary
 %cfg_artifacts.style='highamp'; %show a particular artifact type
 
 %plot "realistic"
-cfg_artifacts.title='cfg_artifacts';%field "title" allows providing a title
+cfg_artifacts.title=['cfg_artifacts_' useRecording];%field "title" allows providing a title
 st_plot_data_quality(cfg_artifacts);
 
 %plot simple
-cfg_artifacts_2.title='cfg_artifacts_2';%field "title" allows providing a title
+cfg_artifacts_2.title=['cfg_artifacts_2_' useRecording];%field "title" allows providing a title
 st_plot_data_quality(cfg_artifacts_2);
 
 

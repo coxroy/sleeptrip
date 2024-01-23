@@ -292,21 +292,15 @@ for detector_i=1:cfg_detector_set.number
     start_end_sample=cellfun(@(X) [X(:,1)-padSample X(:,2)+padSample],...
         start_end_sample,'uni',false);
 
+    %restrict padding to sample range
+    for ch = 1 : numel(start_end_sample)
+        start_end_sample{ch}(start_end_sample{ch}<1)=1;
+        start_end_sample{ch}(start_end_sample{ch}>numSample)=numSample;
+    end
+
+
     %merge overlapping intervals
     start_end_sample=cellfun(@mergeOverlappingIntervals,start_end_sample,'uni',false);
-
-
-    % [~,mem_ind]=ismember(data_selected.time{1}(1844970:1845053),data.time{1});
-    % data.time{1}(mem_ind)
-    %     data_break_num(tmp(:,1))~=data_break_num(tmp(:,2))
-    %     data_break_inds=find(abs(diff(data_selected.time{1})-(1/srate))>(1/srate))'; % index before break
-    % data_break_start_times=data_selected.time{1}(data_break_inds)';
-    % data_break_end_times=data_selected.time{1}(data_break_inds+1)';
-    %
-    % data_break_table=table(data_break_inds,data_break_start_times,data_break_end_times)
-
-
-
 
 
 
@@ -319,6 +313,12 @@ for detector_i=1:cfg_detector_set.number
 
     %remove intervals with identical start/end
     start_end_sample=cellfun(@(X) X(X(:,1)~=X(:,2),:),start_end_sample,'uni',false);
+
+    %------------FIX ME
+    %start_end_sample=cellfun(@(X) X(X(:,1)~=X(:,2),:),start_end_sample,'uni',false);
+
+
+    %--------FIX ME END
 
 
     %---separate any cross-data-boundary events
