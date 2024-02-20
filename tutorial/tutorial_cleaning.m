@@ -17,12 +17,12 @@ ft_hastoolbox('external/brewermap',1,1); %add brewermap color functions
 % -elec: corresponding channel locations
 % -scoring: corresponding sleep scores
 
+%It is essential that the variables 'data', 'elec', and 'scoring' match each other (which is the case for the included example data).
+
 %select recording
-useRecording='1186_64'; % default example
-%useRecording='1053_64'; % other example
-
-%It is essential that the variables 'data', 'elec', and 'scoring' match each other (which is the case for these example data).
-
+useRecording='p1'; % default example
+%useRecording='p2'; % second example
+%useRecording='p3'; % third example (primarily used for tutorial_ICA)
 
 prefix = fileparts(which('st_defaults'));
 loadPath=fullfile(prefix,'tutorial','tutorial_data',useRecording,'data_scoring_elec.mat');

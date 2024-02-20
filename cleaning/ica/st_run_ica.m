@@ -3,10 +3,10 @@ function [comp,compLabelProbsTable]=st_run_ica(cfg,data)
 %---input checks and defaults----
 ft_checkconfig(cfg,'required',{'elec','scoring'});
 
-cfg.preclean=ft_getopt(cfg, 'preclean', 'yes'); %clean by default
-cfg.stages_ica_train=ft_getopt(cfg, 'stages_ica_train', cfg.scoring.label);
-cfg.ica_opts=ft_getopt(cfg, 'ica_opts', {});
-cfg.iclabel=ft_getopt(cfg,'iclabel','yes');
+cfg.preclean=ft_getopt(cfg, 'preclean', 'yes'); %default: preclean
+cfg.stages_ica_train=ft_getopt(cfg, 'stages_ica_train', cfg.scoring.label); %default: all available stages
+cfg.runica_opts=ft_getopt(cfg, 'runica_opts', {}); %default: no special runica options
+cfg.iclabel=ft_getopt(cfg,'iclabel','yes'); %default: run IClabel
 
 
 if istrue(cfg.preclean)
@@ -33,8 +33,6 @@ if istrue(cfg.preclean)
 
     %%%
 
-    %%%
-
     %detect artifacts (across stages used for ICA training)
     cfg_artifacts=st_run_detector_set(cfg.detector_set,data);
 
@@ -43,10 +41,10 @@ if istrue(cfg.preclean)
 
     cfg_artifacts.channelexpandthresh=Inf;%never expand artifacts to neigbors
     cfg_artifacts.segmentrejectthresh=0.5; %exclude segment if >= half of channels are artifactual
-    
+
     %channels being artifactual for 10% of ica-data are considered poor
     proportion_ica_stages=mean(ismember(cfg.scoring.epochs,cfg.stages_ica_train));
-    cfg_artifacts.badchannelthresh=0.1*proportion_ica_stages; %normally 0.5: 
+    cfg_artifacts.badchannelthresh=0.1*proportion_ica_stages; %normally 0.5:
 
     cfg_artifacts=st_process_detector_results(cfg_artifacts);
 
@@ -65,7 +63,7 @@ if istrue(cfg.preclean)
     data=st_repair_artifacts(cfg_artifacts,data);
 
 
-%contains segments marked for exclusion
+    %contains segments marked for exclusion
     scoring_for_selection=cfg_artifacts.scoring_artifact_level;
 else
     scoring_for_selection=cfg.scoring;
@@ -80,8 +78,6 @@ cfg_select.usescoringexclusion='yes';
 cfg_select.makecontinuous='yes';
 
 data_ica=st_select_data(cfg_select, data);
-
-
 
 %extract data
 dat=data_ica.trial{1};
@@ -101,27 +97,27 @@ dat_rank=rank(dat);
 
 if dat_rank<size(dat,1)
     ft_warning('data is not full rank\nrunning ICA with pca option\n')
-    pca_flag= find(strcmp(cfg.ica_opts,'pca'));
+    pca_flag= find(strcmp(cfg.runica_opts,'pca'));
     if isempty(pca_flag)
 
         new_pca=dat_rank;
     else
-        previous_pca=cfg.ica_opts{pca_flag+1};
+        previous_pca=cfg.runica_opts{pca_flag+1};
 
         new_pca=min(previous_pca,dat_rank);
 
         %clear previous pca setting
-        cfg.ica_opts(pca_flag:pca_flag+1)=[];
+        cfg.runica_opts(pca_flag:pca_flag+1)=[];
 
     end
 
     %add updated pca setting
-    cfg.ica_opts=[cfg.ica_opts 'pca' new_pca];
+    cfg.runica_opts=[cfg.runica_opts 'pca' new_pca];
 end
 
 
-%run ICA (with options from cfg.ica_opts)
-[weights, sphere] = runica(dat, cfg.ica_opts{:});
+%run ICA (with options from cfg.runica_opts)
+[weights, sphere] = runica(dat, cfg.runica_opts{:});
 
 % calculate mixing/unmixing matrices
 unmixing = weights * sphere; %comp x chan
@@ -155,6 +151,8 @@ cfg_comp.topolabel = data.label(:); % Supply the original channel label informat
 %calculate component time courses for entire data
 comp = ft_componentanalysis(cfg_comp, data);
 
+
+%--IClabel----
 if istrue(cfg.iclabel)
 
     %call IClabel
@@ -173,8 +171,8 @@ if istrue(cfg.iclabel)
     end
 
 end
-%--remove  components
 
+%--remove  components
 
 %     cfg=[];
 %     cfg.component=badCompInds;

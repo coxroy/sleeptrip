@@ -39,16 +39,24 @@ if ~isfolder(tutorialDataFolder)
     targetPath=fullfile(tutorialDataFolder,fileURL);
     websave(targetPath, downloadURL);
 
-    %unzip
-    fprintf('unzipping...\n')
-    unzip(targetPath,tutorialDataFolder)
+    fprintf('download successful\n')
 
-    %remove zip
-    fprintf('removing zip...\n')
-    delete(targetPath)
+    try
+        %unzip
+        fprintf('unzipping...\n')
+        unzip(targetPath,tutorialDataFolder) %note: Matab's unzipping utility seems to have file size limitations
 
-    % Inform the user that the download is complete
-    fprintf('finished\n');
+        %remove zip
+        fprintf('removing zip...\n')
+        delete(targetPath)
+
+        % Inform the user that the download is complete
+        fprintf('finished\n');
+
+    catch
+        ft_warning('automatic unzipping failed...\nplease manually unzip %s\nplace the CONTENTS of the extracted zip file in %s\n',targetPath,tutorialDataFolder)
+
+    end
 
 end
 
