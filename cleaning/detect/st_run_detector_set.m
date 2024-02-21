@@ -74,8 +74,6 @@ ft_checkconfig(cfg_detector_set,'required',{'number','label','detectors','elec',
 fprintf([functionname ' function initialized\n'])
 
 scoring=cfg_detector_set.scoring;
-
-
 srate=data.fsample;
 
 %for every detector
@@ -114,8 +112,10 @@ for detector_i=1:cfg_detector_set.number
     padSample=round(cfg_st.paddingduration*srate);
     mergeSample=round(cfg_st.mergeduration*srate);
 
-    %%%
-    if isfield(cfg_detector,'stages')
+  
+    if isfield(cfg_detector,'stages') %select data corresponding to requested stages
+   
+        %note that data selection is restricted to number of epochs present in scoring (end of recording is ignored if no matching epochs)
         cfg_select=[];
         cfg_select.minlength=scoring.epochlength;
         cfg_select.scoring=scoring;
@@ -125,14 +125,14 @@ for detector_i=1:cfg_detector_set.number
         cfg_select.resettime='no';
 
         data_selected=st_select_data(cfg_select,data);
-    else
+    else %retain all data
         data_selected=data;
 
     end
 
     %get final channel/sample count
     [numChan, numSample]=size(data_selected.trial{1});
-    %%%
+    
 
     % -------extract FieldTrip cfg and perform processing if requested
     if isfield(cfg_detector,'ft')
@@ -314,13 +314,6 @@ for detector_i=1:cfg_detector_set.number
     %remove intervals with identical start/end
     start_end_sample=cellfun(@(X) X(X(:,1)~=X(:,2),:),start_end_sample,'uni',false);
 
-    %------------FIX ME
-    %start_end_sample=cellfun(@(X) X(X(:,1)~=X(:,2),:),start_end_sample,'uni',false);
-
-
-    %--------FIX ME END
-
-
     %---separate any cross-data-boundary events
 
 
@@ -398,8 +391,6 @@ for detector_i=1:cfg_detector_set.number
     [~, varOrder] = ismember(eventTable.Properties.VariableNames, {'event','channel','start','stop','duration'});
     [~, resortOrder] = sort(varOrder);
     eventTable = eventTable(:,resortOrder);
-
-
 
     %collect raw artifact info
     artifacts.(cfg_detector.label).label=cfg_detector.label;

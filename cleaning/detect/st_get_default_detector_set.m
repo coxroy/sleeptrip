@@ -23,6 +23,7 @@ function cfg_detector_set=st_get_default_detector_set(cfg)
 %   'flatline'
 %   'deviant'
 %   'similar'
+%   'similar2'
 %
 % Output:
 %     cfg_detector_set  = output cfg, containing details of individual
@@ -92,24 +93,19 @@ fprintf([functionname ' function initialized\n']);
 fsample=cfg.fsample;
 
 %---determine requested detectors--
-allDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'deviant' 'similar','similar_global','zmaxslow','zmaxeye'};
+allDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'deviant' 'similar','similar2','zmaxslow','zmaxeye'};
 
 %select requested (and possible) detectors
 if strcmp(cfg.include,'all')
     requestedDetectors=allDetectors;
-    %all_detectors_cfg=all_detectors_cfg;
 elseif strcmp(cfg.include,'default_eeg')
-    requestedDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'deviant' 'similar','similar_global'};
-
+    requestedDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'deviant' 'similar','similar2'};
 elseif strcmp(cfg.include,'default_zmax')
     requestedDetectors={'highamp' 'lowamp' 'lowfreq' 'highfreq' 'jump' 'flatline' 'zmaxslow' 'zmaxeye'}; %exclude neighborhood-based detectors
-
 elseif strcmp(cfg.include,'default_ica')
     requestedDetectors={'highamp','deviant'};
-
 else %user-specified list
     requestedDetectors=cfg.include;
-
 end
 
 %initialize empty cell to populate individual detectors
@@ -300,11 +296,11 @@ for requested_detect_i=1:length(requestedDetectors)
 
             end
 
-        case 'similar_global'
+        case 'similar2'
             %%
             %--similar to neighbors detector (II)
             cfg_detector=[];
-            cfg_detector.label='similar_global';
+            cfg_detector.label='similar2';
 
             %ft
             cfg_detector.ft.hpfilter     = 'yes';
@@ -325,8 +321,8 @@ for requested_detect_i=1:length(requestedDetectors)
 
 
             cfg_detector.st.thresholddirection='above';
-            cfg_detector.st.thresholdvalue  = 0.8; % artifact threshold: < corrthresh
-            cfg_detector.st.channelthreshold =0.9; % artifact threshold: > chanpropthresh
+            cfg_detector.st.thresholdvalue  = 0.9; % artifact threshold: > corrthresh
+            cfg_detector.st.channelthreshold =0.5; % artifact threshold: > chanpropthresh
             cfg_detector.st.segmentlength=5;
 
             cfg_detector.st.mergeduration=5; %merge artifacts if within this range (in seconds).
@@ -402,7 +398,7 @@ for requested_detect_i=1:length(requestedDetectors)
             if ~isempty(neighbours)
                 all_detectors_cfg{end+1}=cfg_detector;
             else
-                ft_warning('creation of detector zmaxslow failed: no neighbourhood structure\n')
+                ft_warning('creation of detector zmaxeye failed: no neighbourhood structure\n')
 
             end
 

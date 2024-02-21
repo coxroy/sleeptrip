@@ -122,6 +122,8 @@ fsample = data.fsample;
 
 if hasScoring
 
+    %note that data selection is restricted to number of epochs present in scoring
+
     sleepStagesOfInterst = cfg.stages;
     epochs = scoring.epochs;
     excluded = scoring.excluded;
