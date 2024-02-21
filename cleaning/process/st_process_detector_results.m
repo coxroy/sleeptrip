@@ -22,11 +22,11 @@ function cfg_artifacts=st_process_detector_results(cfg_artifacts)
 %     [main]
 %     cfg.neighbours = neighbourhood structure to be used by ST_EXPAND_ARTIFACTS_TO_NEIGHBOURS (default taken from ST_GET_DEFAULT_NEIGHBOURS)
 %     cfg.keepeventtables = string (default: 'yes')
-%     cfg.merge_detectors = cell array of strings, with names of each detector to include for computation of artifact grid. (default: 'all' [string])
+%     cfg.merge_detectors = cell array of strings, with names of detectors to include for computation of basic artifact grid. (default: 'all')
 %     cfg.segment_length = length of grid segments in seconds (default: 5)
 %     cfg.channelexpandthresh = minimum proportion of artifactual neighbors required to expand artifacts (default: Inf, see ST_EXPAND_ARTIFACTS_TO_NEIGHBOURS)
-%     cfg.segmentrejectthresh = minimum proportion of channels required to label segment as rejected (default: 0.5, see ST_ARTIFACT_REJECT_GRID)
-%     cfg.badchannelthresh = minimum proportion of unrejected segments required to label all segments of a channel as artifact (default: 0.5, see ST_EXPAND_ARTIFACTS_TO_SEGMENTS)
+%     cfg.segmentrejectthresh = minimum proportion of channels required to label segment as rejected (default: Inf, see ST_ARTIFACT_REJECT_GRID)
+%     cfg.badchannelthresh = minimum proportion of unrejected segments required to label all segments of a channel as artifact (default: Inf, see ST_EXPAND_ARTIFACTS_TO_SEGMENTS)
 %
 % Output:
 %     cfg = configuration containing channelwise artifact information
@@ -99,14 +99,13 @@ if ~isfield(cfg_artifacts,'neighbours')
 end
 
 
-
 %%
 
 %--------PROCESS EVENTS-------
 
 %--------------1: convert continuous artifacts (requested types only) to basic artifact_grid (ch x seg)
 
-%get artifact grids (both merged and separate by detector type)
+%get artifact grids (both merged and separated by detector type)
 cfg_artifacts=st_event_tables_to_array(cfg_artifacts);
 
 %-------------2: channel expanded artifacts (based on neighbors)
