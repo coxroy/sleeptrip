@@ -304,7 +304,7 @@ for requested_detect_i=1:length(requestedDetectors)
 
             %ft
             cfg_detector.ft.hpfilter     = 'yes';
-            cfg_detector.ft.hpfreq       = 4;
+            cfg_detector.ft.hpfreq       = 2;
 
             %st
             cfg_detector.st.method='neighbours';
