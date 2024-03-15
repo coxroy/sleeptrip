@@ -41,19 +41,21 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                                 Note that 'single_trial' and 'double_trial' only convert the data.trial to the desired precision (default = 'single_trial')
 %   cfg.highlightscoringchannels = either 'yes' or 'no' if the scoring channels
 %                                 should be highlighted (default = 'yes')
-%   cfg.events                  = a table or events with the columns named: event start stop duration channel
+%
+%   ---events---
+%   cfg.events                  = a table of events with the columns named: event start stop duration channel
 %                                 ... with the columns giving:
 %                                 event: the name of the event type, note
 %                                        that giving a lot of unique event
 %                                        names results in a lot of
 %                                        different event types (with each
-%                                        an own color).
+%                                        their own color and legend entry).
 %                                 start: start of the event in seconds since data start
 %                                 stop: stop of the event in seconds since data start
 %                                 duration: duration of the event in seconds since data start
 %                                 channel: a string with the channels that
-%                                          match each event. either matching is exaclt (fast version,cfg.eventchannelmatching = 'exact')
-%                                          of uses wildcards if cfg.eventchannelmatching = 'wildcard' e.g. 'C*' to match all
+%                                          match each event. either matching is exact (fast version,cfg.eventchannelmatching = 'exact')
+%                                          or uses wildcards if cfg.eventchannelmatching = 'wildcard' e.g. 'C*' to match all
 %                                          channels that start with C, or 'all' to
 %                                          match all channels, SEE FT_CHANNELSELECTION for details.
 %   cfg.eventchannelmatching    = either match channels of events to the
@@ -77,33 +79,39 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                                 (default = 0.05)
 %   cfg.startepoch              = number of epoch to start view in.
 %   cfg.ylim                    = vertical scaling, can be 'maxmin', 'maxabs' or [ymin ymax] (default = 'maxabs')
-%   cfg.zlim                    = color scaling to apply to component topographies, 'minmax', 'maxabs' (default = 'maxmin')
-%   cfg.epochlength             = duration in seconds for scoring and
-%                                 cutting the data up (default = 30)
+%   cfg.epochlength             = duration in seconds for scoring and cutting the data up (default = 30)
 %   cfg.trl                     = structure that defines the data segments of interest, only applicable for trial-based data
 %   cfg.continuous              = 'yes' or 'no' whether the data should be interpreted as continuous or trial-based
+%   cfg.zlim                    = color scaling to apply to component topographies, 'minmax', 'maxabs' (default = 'maxmin')
+%
+%   ---channels---
 %   cfg.channel                 = cell-array with channel labels to use for the data, see FT_CHANNELSELECTION
-%   cfg.channeldisplayed        = cell-array with channel labesl to be
+%   cfg.channeldisplayed        = cell-array with channel labels to be
 %                                 selected for displaying (while still retaining the other channels available)
 %   cfg.plotlabels              = 'yes' (default), 'no', 'some'; whether
 %                                 to plot channel labels in vertical viewmode ('some' plots one in every ten
-%                                 labels; useful when plotting a large number of channels at a time)
+%                                 labels; useful when plotting a large number of channels at a time). 'yes/some' ignored when plotting more channels than allowed by 'channelmaxlabels'
+%   cfg.channelmaxlabels        = maximal number of channel labels to display (default = 64)
+%   cfg.chanlabelfontsize       = normalized fontsize of channel labels (default = 'automatic': range 0.004-0.04 depending on channel count)
 %   cfg.ploteventlabels         = 'type=value', 'colorvalue' (default = 'type=value');
 %   cfg.viewmode                = string, 'vertical', currently 'butterfly' or 'component' for visualizing components e.g. from an ICA are not supported (default is 'vertical')
 %   cfg.artfctdef.xxx.artifact  = Nx2 matrix with artifact segments see FT_ARTIFACT_xxx functions
 %   cfg.selectfeature           = string, name of feature to be selected/added (default = 'arousal')
 %   cfg.selectmode              = 'markartifact', 'markpeakevent', 'marktroughevent' (default = 'markartifact')
-%   cfg.colorgroups             = 'sequential' 'allblack' 'jet' 'hsv' 'labelcharx' (x = xth character in label), 'chantype' or
-%                                  vector with length(data/hdr.label) defining groups (default = 'sequential')
-%   cfg.channelcolormap         = COLORMAP (default = customized lines map with 15 colors)
-%   cfg.channelmaxlabels        = maximal number of channels to print
-%                                 labels (default = 64)
+%
 %   cfg.selfun                  = string, name of function which is evaluated using the right-click context menu
 %                                  The selected data and cfg.selcfg are passed on to this function.
 %   cfg.selcfg                  = configuration options for function in cfg.selfun
 %   cfg.renderer                = string, 'opengl', 'zbuffer', 'painters', see MATLAB Figure Properties. If this function crashes, you should try 'painters'.
-%   cfg.bgcolor                 = background color, either 'white' or
-%                                 'dark' (default = 'white')
+%
+%   ---colors---
+%   cfg.bgcolor                 = background color, either 'white' or 'dark' (default = 'white')
+%   cfg.color_text_on_bg        = color of text elements (channel label, sleep stage, epoch number) as RGB triplet (default:[0.75 0 0])
+%   cfg.colorgroups             = 'sequential' 'allblack' 'jet' 'hsv' 'labelcharx' (x = xth character in label), 'chantype' or
+%                                  vector with length(data/hdr.label) defining groups (default = 'sequential')
+%   cfg.channelcolormap         = COLORMAP (default = customized lines map with 15 colors)
+%
+%   ---scaling---
 %   cfg.eegscale                = number, scaling to apply to the EEG channels prior to display
 %   cfg.eogscale                = number, scaling to apply to the EOG channels prior to display
 %   cfg.ecgscale                = number, scaling to apply to the ECG channels prior to display
@@ -261,11 +269,13 @@ cfg.precision = ft_getopt(cfg, 'precision', 'single_trial');
 cfg.eventchannelmatching  = ft_getopt(cfg, 'eventchannelmatching', 'exact');
 cfg.eventsplothypnogram = ft_getopt(cfg, 'eventsplothypnogram', 'no');
 cfg.highlightscoringchannels = ft_getopt(cfg, 'highlightscoringchannels', 'no');
-cfg.channelmaxlabels = ft_getopt(cfg, 'channelmaxlabels', 64);
 
-%if hasdata
-%
-%end
+cfg.channelmaxlabels = ft_getopt(cfg, 'channelmaxlabels', 64);
+cfg.chanlabelfontsize=ft_getopt(cfg,'chanlabelfontsize','automatic'); %default: automatic (handled later)
+
+%text color (sleep stage, channel label, segment)
+cfg.color_text_on_bg = ft_getopt(cfg,'color_text_on_bg', [0.75 0 0]); %original value [0.8 0.8 0.8]
+
 
 if istrue(cfg.datainteractive)
     ask_again = true;
@@ -599,16 +609,29 @@ if isfield(cfg,'events')
 
     %---event highlighting
 
+    %get global/default event highlighting
     cfg.eventhighlighting = ft_getopt(cfg, 'eventhighlighting', 'box');
 
-    %take eventhighlightmapping from cfg when present, otherwise default to cfg.eventhighlighting
+    %specify defaultEventhighlightmapping for all event types using default cfg.eventhighlighting
     defaultEventhighlightmapping=[cfg.EventTypes repmat({cfg.eventhighlighting},[cfg.nEventTypes 1])];
+    
+    actualEventhighlightmapping=defaultEventhighlightmapping;
+    if isfield(cfg,'eventhighlightmapping')
 
-    cfg.eventhighlightmapping=ft_getopt(cfg,'eventhighlightmapping',defaultEventhighlightmapping);
+        %for every event type, locate desired highlightmapping
+    [isM,ind]=ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1));
 
-    %sort eventcolormapping according to eventorder/EventTypes, using requested colors if provided and default otherwise
-    [isM, ind]=ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1));
-    cfg.eventhighlightmapping=[cfg.eventhighlightmapping(ind(isM),:); defaultEventhighlightmapping(~isM,:)];
+    actualEventhighlightmapping(isM,2)=cfg.eventhighlightmapping(ind(isM),2);
+    end
+    
+    cfg.eventhighlightmapping=actualEventhighlightmapping;
+
+%     %get user-supplied mapping (including missing/extra event types), otherwise default mapping
+%     cfg.eventhighlightmapping=ft_getopt(cfg,'eventhighlightmapping',defaultEventhighlightmapping);
+% 
+%     %sort eventcolormapping according to eventorder/EventTypes, using requested colors if provided and default otherwise
+%     [isM, ind]=ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1));
+%     cfg.eventhighlightmapping=[cfg.eventhighlightmapping(ind(isM),:); defaultEventhighlightmapping(~isM,:)];
 
     %event snake width
     cfg.snakewidth=ft_getopt(cfg,'snakewidth',10);
@@ -1640,7 +1663,7 @@ if strcmp(cfg.doSleepScoring,'yes')
     cfg.underlayAlphaSignal_color = [0/255 192/255 0/255];
     cfg.underlaySOSignal_color = [255/255 165/255 0/255];
 
-    cfg.color_text_on_bg = [0.8 0.8 0.8];
+
 
     cfg.curr_displayed_detected_slowosci_perc_display_ind = 0;
     cfg.curr_displayed_detected_slowosci_perc = -1;
@@ -6342,7 +6365,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
         else
             needredrawchanlabel = false;
         end
-        if (cfg.channelmaxlabels <= length(chanindx))
+        if (cfg.channelmaxlabels < length(chanindx))
             delete(chanob);
             needredrawchanlabel = false;
         end
@@ -6385,6 +6408,21 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
             timx = timx + hpos;
         end
 
+        %set up channel label size
+        chanlabelfontsize=cfg.chanlabelfontsize; %either specific number or "automatic"
+        if strcmp(chanlabelfontsize,'automatic')
+
+            %dynamic fontsize depending on channel count..
+            chanlabelfontsize=0.9/2/numel(chanindx);
+            %..but within bounds
+            chanlabel_fontsize_min=0.004;
+            chanlabel_fontsize_max=0.04;
+            if chanlabelfontsize<chanlabel_fontsize_min; chanlabelfontsize= chanlabel_fontsize_min;end
+            if chanlabelfontsize>chanlabel_fontsize_max; chanlabelfontsize= chanlabel_fontsize_max;end
+
+        end
+
+
         for i = 1:length(chanindx)
             %         if strcmp(cfg.viewmode, 'component')
             %             color = 'k';
@@ -6395,10 +6433,11 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
             laysel = laysels(i);
             if ~isempty(datsel) && ~isempty(laysel)
 
+                %plot channel labels
                 if needredrawchanlabel
                     if opt.plotLabelFlag == 1 || (opt.plotLabelFlag == 2 && mod(i,10)==0)
 
-                        h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', 0.025, 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
+                         h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', chanlabelfontsize, 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
                             'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.width, 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', [-1 1],'interpreter','none');
 
                         %                     h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', 0.9/2/numel(chanindx), 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
@@ -6526,7 +6565,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
         else
             needredrawchanlabel = false;
         end
-        if (cfg.channelmaxlabels <= length(chanindx))
+        if (cfg.channelmaxlabels < length(chanindx))
             delete(chanob);
             needredrawchanlabel = false;
         end
