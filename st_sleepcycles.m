@@ -5,7 +5,7 @@ function [res_cycle] = st_sleepcycles(cfg,scoring)
 % Use as
 %   res_cycle = st_sleepcycles(cfg, scoring)
 %
-% Configutation parameter can be empty, e.g. cfg = []
+% Configuration parameter can be empty, e.g. cfg = []
 %
 % Optional configuration parameters are
 %   either

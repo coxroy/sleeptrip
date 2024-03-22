@@ -173,9 +173,6 @@ else
     end
 end
 
-scoring_cycles = {scoring};
-cycle_complete = NaN;
-cycle_labels   = {'non-separated'};
 
 scoring_duration_min = numel(scoring.epochs)*scoring.epochlength/60;
 
@@ -185,12 +182,18 @@ if isfield(scoring,'dataoffset')
 end
 
 
+%intialize sleep cycle information. default: one cycle containing entire scoring
+scoring_cycles = {scoring};
+cycle_complete = NaN;
+cycle_labels   = {'non-separated'};
 
-
+%otherwise, separate scoring into parts, one for each cycle
 if isfield(cfg,'cycle')
     res_cycle = st_sleepcycles(cfg,scoring);
     cycle_complete = res_cycle.table.complete;
     cycle_labels = arrayfun(@(x) cellstr(num2str(x)),res_cycle.table.cycle);
+    
+    %cut scoring into cycles
     cfg2 = [];
     cfg2.start = res_cycle.table.startepoch;
     cfg2.end = res_cycle.table.endepoch;
@@ -272,6 +275,7 @@ res.ori = getfunctionname();
 res.type = 'descriptive';
 res.cfg = cfg;
 
+%loop across scoring parts/cycles and calculate architecture for each
 for iScoringCycle = 1:numel(scoring_cycles)
     scoring = scoring_cycles{iScoringCycle};
     res_cycle_sccy = st_sleepcycles(cfg,scoring);
@@ -352,9 +356,10 @@ for iScoringCycle = 1:numel(scoring_cycles)
     fprintf([functionname ' function initialized\n']);
 
 
-    dummySampleRate = 100;
+    %dummySampleRate = 100;
+    %epochLengthSamples = scoring.epochlength * dummySampleRate;
+
     %lightsOffSample = round(lightsOffMoment*dummySampleRate);
-    epochLengthSamples = scoring.epochlength * dummySampleRate;
 
     epochs = cellfun(@sleepStage2str,scoring.epochs','UniformOutput',0);
     hypnStages = [cellfun(@sleepStage2str,epochs,'UniformOutput',0) ...
@@ -377,8 +382,8 @@ for iScoringCycle = 1:numel(scoring_cycles)
     NRtime_all = SWStime_all + N2Time_all;
 
     hypnEpochs = 1:numel(epochs);
-    hypnEpochsBeginsSamples = (((hypnEpochs - 1) * epochLengthSamples) + 1)';
-    hypnEpochsEndsSamples   = (hypnEpochs * epochLengthSamples)';
+    %hypnEpochsBeginsSamples = (((hypnEpochs - 1) * epochLengthSamples) + 1)';
+    %hypnEpochsEndsSamples   = (hypnEpochs * epochLengthSamples)';
 
     [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage allowedsleeponsetbeforesleepopon allowedsleepaftersleepopoff] = st_sleeponset(cfg,scoring);
 
@@ -494,8 +499,8 @@ for iScoringCycle = 1:numel(scoring_cycles)
         hypnStagesTST = hypnStages(onsetnumber:lastscoredsleepstagenumber,:);
         hypnStagesPreSleepOnset = hypnStages(1:preOnsetCandidate,:);
         hypnEpochsTST = hypnEpochs(onsetnumber:lastscoredsleepstagenumber);
-        hypnEpochsBeginsSamplesTST = hypnEpochsBeginsSamples(onsetnumber:lastscoredsleepstagenumber,:);
-        hypnEpochsEndsSamplesTST = hypnEpochsEndsSamples(onsetnumber:lastscoredsleepstagenumber,:);
+        %hypnEpochsBeginsSamplesTST = hypnEpochsBeginsSamples(onsetnumber:lastscoredsleepstagenumber,:);
+        %hypnEpochsEndsSamplesTST = hypnEpochsEndsSamples(onsetnumber:lastscoredsleepstagenumber,:);
 
         totalSleepPeriod = (length(onsetnumber:lastscoredsleepstagenumber))*scoring.epochlength;
     else
@@ -505,8 +510,8 @@ for iScoringCycle = 1:numel(scoring_cycles)
         hypnStagesTST = hypnStages(1:0,:);
         hypnStagesPreSleepOnset = hypnStages(1:numel(scoring.epochs),:);
         hypnEpochsTST = hypnEpochs(1:0);
-        hypnEpochsBeginsSamplesTST = hypnEpochsBeginsSamples(1:0,:);
-        hypnEpochsEndsSamplesTST = hypnEpochsEndsSamples(1:0,:);
+        %hypnEpochsBeginsSamplesTST = hypnEpochsBeginsSamples(1:0,:);
+        %hypnEpochsEndsSamplesTST = hypnEpochsEndsSamples(1:0,:);
 
         totalSleepPeriod = 0;
     end
@@ -573,7 +578,7 @@ for iScoringCycle = 1:numel(scoring_cycles)
                 nArousalsByStageNonMTnonExcl(iStages) = size(scorings_cut_appended.arousals,1);
             end
         end
-    end
+    end %end arousals
 
     hypnEpochs = 1:numel(scoring.epochs);
     hypnEpochsTST = 1:numel(hypnStagesTST(:,1));
@@ -1169,7 +1174,8 @@ for iScoringCycle = 1:numel(scoring_cycles)
         res.table = cat(1,res.table,table_tmp);
     end
 
-end
+end %cycle loop
+
 fprintf([functionname ' function finished\n']);
 
 toc

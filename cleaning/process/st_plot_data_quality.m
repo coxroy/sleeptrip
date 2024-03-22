@@ -315,7 +315,7 @@ elseif hasScoring
 
     axes(ax_hyp);
 
-    %get simple sleep architecture
+    %get simple sleep architecture (using segment-level scoring)
     tmp_cfg=[];
     tmp_cfg.sleeponsetdef='XR'; %any stage
     descriptives=st_scoringdescriptives(tmp_cfg,scoring);
@@ -391,10 +391,14 @@ elseif hasScoring
         'ColorOrder',stage_label_colors,...
         'Visible','off')
 
-    try %fix for "?" only
-        text(mean(xDat,2),repmat(text_y_coor,[1 length(stage_labels)]),legend_labels,...
-            'FontSize',fsize_legend,'HorizontalAlignment','center','FontWeight','bold','Color','w');
+
+    %if only a single stage is present, legend_labels needs to be unnested
+    if numel(legend_labels)==1
+        legend_labels=legend_labels{1};
     end
+    text(mean(xDat,2),repmat(text_y_coor,[1 length(stage_labels)]),legend_labels,...
+        'FontSize',fsize_legend,'HorizontalAlignment','center','FontWeight','bold','Color','w');
+
 
     ylim([0.5 1.5])
 
