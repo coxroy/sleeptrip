@@ -94,6 +94,13 @@ cfg.allowsleepopoffafterscoring  = ft_getopt(cfg, 'allowsleepopoffafterscoring',
 
 cfg.fixindicatorstoepochlength  = ft_getopt(cfg, 'fixindicatorstoepochlength', 'no');
 
+%scoring fields lightsoff/lightson/sleepopon/sleepopoff could exist but be empty. if so, treat as NaN
+if isfield(scoring, 'lightsoff') && isempty(scoring.lightsoff); scoring.lightsoff=NaN; end
+if isfield(scoring, 'lightson') && isempty(scoring.lightson); scoring.lightson=NaN; end
+if isfield(scoring, 'sleepopon') && isempty(scoring.sleepopon); scoring.sleepopon=NaN; end
+if isfield(scoring, 'sleepopoff') && isempty(scoring.sleepopoff); scoring.sleepopoff=NaN; end
+
+%if fixindicatorstoepochlength is anything other than "no", adjust lightsoff/lightson/sleepopon/sleepopoff markers
 if ~strcmp(cfg.fixindicatorstoepochlength,'no')
     ft_warning('trying to fix the indicators like lightsoff, lightson, sleepopon and sleepopoff in the scoring to whole epochs with ''%s''.',cfg.fixindicatorstoepochlength)
     if isfield(scoring, 'lightsoff')
