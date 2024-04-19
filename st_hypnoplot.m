@@ -648,8 +648,9 @@ end
 %res_cycle = st_sleepcycles(cfg,scoring);
 %cycle_table=res_cycle.table;
 
+if istrue(cfg.plotcycles)
 [cycle_table,episode_table]=st_find_cycles(cfg,scoring);
-
+end
 %combine
 %res_period={res_episodeNR,res_episodeR};
 
