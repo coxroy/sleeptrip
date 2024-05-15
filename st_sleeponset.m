@@ -8,7 +8,7 @@ function [onsetnumber lastscoredsleepstagenumber onsetepoch lastscoredsleepstage
 %   [onsetnumber, lastscoredsleepstagenumber] = st_sleeponset(cfg,scoring)
 %   [onsetnumber] = st_sleeponset(cfg,scoring)
 %
-% Configutation parameter can be empty, e.g. cfg = []
+% Configuration parameter can be empty, e.g. cfg = []
 %
 % Optional configuration parameters are
 %   cfg.sleeponsetdef  = string, sleep onset either 'N1' or 'N1_NR' or 'N1_XR' or

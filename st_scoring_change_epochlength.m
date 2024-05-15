@@ -1,7 +1,7 @@
 function scoring = st_scoring_change_epochlength(cfg, scoring)
 
 % ST_SCORING_CHANGE_EPOCH_LENGTH changes the epoch length (e.g 30 s) to a
-% desired epoch length with interploation/extrapolation of epochs
+% desired epoch length with interpolation/extrapolation of epochs
 %
 % Use as
 %   [scoring] = st_scoring_change_epochlength(cfg, scoring)

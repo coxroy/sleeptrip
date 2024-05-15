@@ -23,14 +23,14 @@ function [res] = st_scoringdescriptives(cfg, scoring)
 %                        'NR' or 'N2R' or 'XR' or 'AASM' or 'X2R' or
 %                        'N2' or 'N3' or 'SWS' or 'S4' or 'R',
 %                        see ST_SLEEPONSET for details (default = 'N1_XR')
-%   cfg.allowsleeponsetbeforesleepopon = srting, if possible, allow sleep onset before sleep
+%   cfg.allowsleeponsetbeforesleepopon = string, if possible, allow sleep onset before sleep
 %                        opportunity (or lights off moment if former is not present)
 %                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'no')
-%   cfg.allowsleepaftersleepopoff = srting, if possible, allow sleep (offset, i.e. end of sleep) after sleep
+%   cfg.allowsleepaftersleepopoff = string, if possible, allow sleep (offset, i.e. end of sleep) after sleep
 %                        opportunity (or lights on moment if former is not present)
 %                        either 'yes' or 'no' see ST_SLEEPONSET for details (default = 'yes')
-%   cfg.allowsleepopoonbeforescoring = srting, if possible, allow sleep opportunity onset to be before the scoring starts, i.e. to be < 0(default = 'yes')
-%   cfg.allowsleepopoffafterscoring = srting, if possible, allow sleep opportunity offset to be after the scoring ends, i.e. to be > scoring duration(default = 'yes')
+%   cfg.allowsleepopoonbeforescoring = string, if possible, allow sleep opportunity onset to be before the scoring starts, i.e. to be < 0(default = 'yes')
+%   cfg.allowsleepopoffafterscoring = string, if possible, allow sleep opportunity offset to be after the scoring ends, i.e. to be > scoring duration(default = 'yes')
 %   cfg.fixindicatorstoepochlength = string, either 'no', 'start', 'end', and 'snap' to put the
 %                       indicators like lightsoff, lightson, sleepopon and sleepopoff in the scoring
 %                       to the start or end of their epoch or snap them to either the start or end on which whatever is closer (default = 'no')
