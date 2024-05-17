@@ -30,6 +30,13 @@ cfg.removelabel  = ft_getopt(cfg, 'removelabel', {}); % default, nothing to remo
 
 fprintf([functionname ' function initialized\n'])
 
+%single channels may not be nested in expected cell:
+if ~iscell(cfg.reflabel)
+    cfg.reflabel={cfg.reflabel};
+end
+if ~iscell(cfg.removelabel)
+    cfg.removelabel={cfg.removelabel};
+end
 
 elecLabels=cfg.data.label;
 numChans=size(elecLabels,1);
