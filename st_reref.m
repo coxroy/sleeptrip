@@ -30,6 +30,7 @@ cfg.removelabel  = ft_getopt(cfg, 'removelabel', {}); % default, nothing to remo
 
 fprintf([functionname ' function initialized\n'])
 
+
 %single channels may not be nested in expected cell:
 if ~iscell(cfg.reflabel)
     cfg.reflabel={cfg.reflabel};
@@ -48,7 +49,7 @@ for refLabel_i=1:length(refLabels)
     refInd=find(strcmp(elecLabels,refLabels{refLabel_i}));
 
     if isempty(refInd)
-        fprintf('reference label not found\n')
+        fprintf('reference channel %s not found\n',refLabels{refLabel_i})
         rereferenceStruct=struct;
         return
     end
@@ -63,7 +64,7 @@ for removeLabel_i=1:length(removeLabels)
     removeInd=find(strcmp(elecLabels,removeLabels{removeLabel_i}));
 
     if isempty(removeInd)
-        fprintf('remove label not found\n')
+        fprintf('to-be-removed channel %s not found\n',removeLabels{removeLabel_i})
         rereferenceStruct=struct;
         return
     end
