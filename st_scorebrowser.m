@@ -282,8 +282,14 @@ cfg.drawgrid_colors = ft_getopt(cfg,'drawgrid_colors',{[0.9 0.9 0.9] [0.9 0.9 0.
 cfg.drawgrid_LineStyle = ft_getopt(cfg,'drawgrid_LineStyle', {':' '-' '-'});
 
 %text color (sleep stage, channel label, segment)
-cfg.color_text_on_bg = ft_getopt(cfg,'color_text_on_bg', [0.75 0 0]); %original value [0.8 0.8 0.8]
+cfg.color_text_on_bg = ft_getopt(cfg,'color_text_on_bg', [0.75 0 0]); %previous value [0.8 0.8 0.8]
 
+%power and time-frequency
+cfg.display_power_spectrum = ft_getopt(cfg,'display_power_spectrum','no');
+cfg.display_time_frequency = ft_getopt(cfg,'display_time_frequency','no');
+cfg.display_frequency_chan=ft_getopt(cfg,'display_frequency_chan',[]);
+cfg.display_tf_signal_lim = ft_getopt(cfg,'display_tf_signal_lim',[-150 150]);
+cfg.display_tf_tf_pow_lim = ft_getopt(cfg,'display_tf_tf_pow_lim',[-2 2]);
 
 if istrue(cfg.datainteractive)
     ask_again = true;
@@ -622,24 +628,24 @@ if isfield(cfg,'events')
 
     %specify defaultEventhighlightmapping for all event types using default cfg.eventhighlighting
     defaultEventhighlightmapping=[cfg.EventTypes repmat({cfg.eventhighlighting},[cfg.nEventTypes 1])];
-    
+
     actualEventhighlightmapping=defaultEventhighlightmapping;
     if isfield(cfg,'eventhighlightmapping')
 
         %for every event type, locate desired highlightmapping
-    [isM,ind]=ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1));
+        [isM,ind]=ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1));
 
-    actualEventhighlightmapping(isM,2)=cfg.eventhighlightmapping(ind(isM),2);
+        actualEventhighlightmapping(isM,2)=cfg.eventhighlightmapping(ind(isM),2);
     end
-    
+
     cfg.eventhighlightmapping=actualEventhighlightmapping;
 
-%     %get user-supplied mapping (including missing/extra event types), otherwise default mapping
-%     cfg.eventhighlightmapping=ft_getopt(cfg,'eventhighlightmapping',defaultEventhighlightmapping);
-% 
-%     %sort eventcolormapping according to eventorder/EventTypes, using requested colors if provided and default otherwise
-%     [isM, ind]=ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1));
-%     cfg.eventhighlightmapping=[cfg.eventhighlightmapping(ind(isM),:); defaultEventhighlightmapping(~isM,:)];
+    %     %get user-supplied mapping (including missing/extra event types), otherwise default mapping
+    %     cfg.eventhighlightmapping=ft_getopt(cfg,'eventhighlightmapping',defaultEventhighlightmapping);
+    %
+    %     %sort eventcolormapping according to eventorder/EventTypes, using requested colors if provided and default otherwise
+    %     [isM, ind]=ismember(cfg.EventTypes,cfg.eventhighlightmapping(:,1));
+    %     cfg.eventhighlightmapping=[cfg.eventhighlightmapping(ind(isM),:); defaultEventhighlightmapping(~isM,:)];
 
     %event snake width
     cfg.snakewidth=ft_getopt(cfg,'snakewidth',10);
@@ -939,13 +945,22 @@ if numel(data.label) < 3
     %ft_error('Data must conatain at least 3 channels one EOG one EEG and one EMG, please make sure you selected sufficient channels for scoring!');
 end
 
+
+%locate required channel numbers
 [numberEEG numberEEG_frontal numberEEG_occipital numberEOG numberEMG numberECG] = getScoringChannelNumbers(data.label);
+
+numberFreqChan=1;
+tmp_ind=find(strcmp(data.label,cfg.display_frequency_chan));
+if numel(tmp_ind)==1
+    numberFreqChan=tmp_ind;
+end
 
 cfg.score_channel_eeg_number = numberEEG;
 cfg.score_channel_eeg_frontal_number = numberEEG_frontal;
 cfg.score_channel_eeg_occipital_number = numberEEG_occipital;
 cfg.score_channel_eog_number = numberEOG;
 cfg.score_channel_emg_number = numberEMG;
+cfg.score_channel_freq_number = numberFreqChan;
 
 cfg.score_channel_eeg_color           = [1 1 0.8];
 cfg.score_channel_eeg_frontal_color   = [1 0.9 1];
@@ -1593,10 +1608,17 @@ else
     opt.plotLabelFlag = 0;
 end
 
+fig_pos_main=[0 0.05 0.8 0.75]; %left, elevated from bottom, wide,not too high
+fig_pos_tf=[0 0.8 0.8 0.2];
+fig_pos_pow=[0.8 0.8 0.2 0.2];
+fig_pos_hyp=[0.8 0.05 0.2 0.15];
 
+cfg.fig_pos_hyp=fig_pos_hyp;
+cfg.fig_pos_tf=fig_pos_tf;
+cfg.fig_pos_pow=fig_pos_pow;
 
-
-h = figure;
+%-----initialize main scorebrowser window----
+h = figure('units','normalized','outerposition',fig_pos_main);
 
 if ~isempty(cfg.renderer)
     try
@@ -1615,13 +1637,15 @@ end
 if strcmp(cfg.bgcolor,'dark')
     opt.chancolors = 1-opt.chancolors;
 end
-set(h,'MenuBar','none');
-axes('Parent',h,'Position',[0.035 0.09 0.965 0.91]);
+set(h,'NumberTitle', 'off','MenuBar','none','Name','Scorebrowser');
+axes('Parent',h,'Position',[0.03 0.09 0.94 0.90]);
+
 set(h,'color',[0 0 0]);
 set(gca, 'YColor', [0.5 0.5 0.5]);
 
-set(gca,'TickDir','out');
-set(gca,'TickLength',[0.005 0.01])
+tickInfo={'TickDir','out','TickLength',[0.005 0.01]};
+cfg.tickInfo=tickInfo;
+set(gca,cfg.tickInfo{:});
 % a = gca;
 % b = copyobj(a, h);
 % set(b,  'YColor', [0.3 0.3 0.3], 'XTickLabel', [], 'YTickLabel', [])
@@ -1636,9 +1660,6 @@ end
 cfg.browserversion = '3.1.5';
 
 if strcmp(cfg.doSleepScoring,'yes')
-
-
-
 
     cfg.markSpindles = 'no';
     cfg.markSO = 'no';
@@ -1778,11 +1799,10 @@ if strcmp(cfg.doSleepScoring,'yes')
     cfg.skip_to_next = 'always'; %'always' 'firstscore' 'unknown' 'stay'
     cfg.confidence_skip_to_lower_than_threshold = 0;
 
-    cfg.display_power_spectrum = 'no';
     cfg.freq_borders = [0.5 4; 4 8; 8 12; 12 15; 20 30;];
     cfg.freq_colors = jet(size(cfg.freq_borders,1));
 
-    %cfg.display_time_frequency = 'no';
+    %
 
     cfg.plotsignal = 'yes';
 
@@ -1812,26 +1832,26 @@ setappdata(h, 'opt', opt);
 setappdata(h, 'cfg', cfg);
 
 % set the figure window title
-funcname = mfilename();
-if nargin < 2
-    if isfield(cfg, 'dataset')
-        dataname = cfg.dataset;
-    elseif isfield(cfg, 'datafile')
-        dataname = cfg.datafile;
-    else
-        dataname = [];
-    end
-else
-    dataname = inputname(2);
-end
-hfig = gcf;
-if ft_platform_supports('matlabversion',-Inf, '2014a')
-    handlenum = hfig;
-else
-    handlenum = hfig.Number;
-end
-set(gcf, 'Name', sprintf('%d: %s: %s', handlenum, funcname, join_str(', ',dataname)));
-set(gcf, 'NumberTitle', 'off');
+% funcname = mfilename();
+% if nargin < 2
+%     if isfield(cfg, 'dataset')
+%         dataname = cfg.dataset;
+%     elseif isfield(cfg, 'datafile')
+%         dataname = cfg.datafile;
+%     else
+%         dataname = [];
+%     end
+% else
+%     dataname = inputname(2);
+% end
+% hfig = gcf;
+% if ft_platform_supports('matlabversion',-Inf, '2014a')
+%     handlenum = hfig;
+% else
+%     handlenum = hfig.Number;
+% end
+%set(gcf, 'Name', sprintf('%d: %s: %s', handlenum, funcname, join_str(', ',dataname)));
+%set(gcf, 'NumberTitle', 'off');
 
 % set zoom option to on
 % zoom(h,'on')
@@ -2313,10 +2333,6 @@ end % if nargout
 %         roiBegins = roiBegins + signalOffsetSamples_downsampled;
 %         roiEnds = roiEnds + signalOffsetSamples_downsampled;
 %     end
-
-
-
-
 
 
 fprintf([functionname ' function finished\n']);
@@ -4485,23 +4501,25 @@ if strcmp(cfg.bgcolor,'dark') && ~opt.changedBGcolor
 end
 
 if strcmp(cfg.doSleepScoring,'yes')
+
+    %initialize or get hypnogram figure
     if isfield(cfg,'plotHyp')
         if isfield(cfg,'hhyp')
             if ishandle(cfg.hhyp)
-                %figure(cfg.hhyp)
+                figure(cfg.hhyp)
             else
-                cfg.hhyp = figure;
+                cfg.hhyp = figure('units','normalized','outerposition',cfg.fig_pos_hyp);
                 set(cfg.hhyp, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main', h});
-                set(cfg.hhyp, 'NumberTitle', 'off');
+                set(cfg.hhyp, 'NumberTitle', 'off','MenuBar','none');
                 set(cfg.hhyp, 'CloseRequestFcn', {@cleanup_cb_hhyp, 'h_main', h});
                 cfg.hhypfigax = gca;
             end
 
         else
-            cfg.hhyp = figure;
+            cfg.hhyp = figure('units','normalized','outerposition',cfg.fig_pos_hyp);
             figure(cfg.hhyp)
             set(cfg.hhyp, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main',h});
-            set(cfg.hhyp, 'NumberTitle', 'off');
+            set(cfg.hhyp, 'NumberTitle', 'off','MenuBar','none');
             set(cfg.hhyp, 'CloseRequestFcn', {@cleanup_cb_hhyp, 'h_main', h});
             cfg.hhypfigax = gca;
             %cfg.hhypfig = gcf;
@@ -4767,8 +4785,7 @@ end
 % FW end
 
 figure(h); % ensure that the calling figure is in the front
-%hold all;
-%set(h, 'Name', sprintf('Datasetnum %d: %s',cfg.datasetnum,cfg.datasetsPath));
+
 
 if ~isempty(opt.event) && isstruct(opt.event)
     % select only the events in the current time window
@@ -4905,24 +4922,24 @@ if strcmp(cfg.doSleepScoring,'yes')
     end
 
     if istrue(cfg.drawgriddynamic) %only use values below in dynamic mode
-    switch opt.nEpochsPerBlock
-        case 1
-            cfg.drawgrid_seconds = [0.5 1 3];
-            cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]};
-            cfg.drawgrid_LineStyle = {':' '-' '-'};
-        case 2
-            cfg.drawgrid_seconds = [1 3 30];
-            cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]};
-            cfg.drawgrid_LineStyle = {':' '-' '-'};
-        case 3
-            cfg.drawgrid_seconds = [3 30];
-            cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.5 0 0]};
-            cfg.drawgrid_LineStyle = {'-' '-'};
-        otherwise
-            cfg.drawgrid_seconds = [30];
-            cfg.drawgrid_colors = {[0.5 0 0]};
-            cfg.drawgrid_LineStyle = {'-'};
-    end
+        switch opt.nEpochsPerBlock
+            case 1
+                cfg.drawgrid_seconds = [0.5 1 3];
+                cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]};
+                cfg.drawgrid_LineStyle = {':' '-' '-'};
+            case 2
+                cfg.drawgrid_seconds = [1 3 30];
+                cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]};
+                cfg.drawgrid_LineStyle = {':' '-' '-'};
+            case 3
+                cfg.drawgrid_seconds = [3 30];
+                cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.5 0 0]};
+                cfg.drawgrid_LineStyle = {'-' '-'};
+            otherwise
+                cfg.drawgrid_seconds = [30];
+                cfg.drawgrid_colors = {[0.5 0 0]};
+                cfg.drawgrid_LineStyle = {'-'};
+        end
     end
 
 
@@ -4950,6 +4967,7 @@ if strcmp(cfg.doSleepScoring,'yes')
     nSamples_data = size(opt.orgdata.trial{1},2);
     FrqOfSmpl = opt.orgdata.fsample;
 
+    %set up defintion of buffered window (=epoch plus padding)
     cfg_buffered_signal_redef = [];
     lengthEpochSamples = endsample - begsample+1;
     buff_begsample = begsample-fix(cfg.nEpochsBuffer*lengthEpochSamples);
@@ -4974,12 +4992,15 @@ if strcmp(cfg.doSleepScoring,'yes')
 
         data_det_signal_eeg_data = [];
 
+        %for markSO and underlaySOSignal: select single channel (default: score_channel_eeg_frontal_number)
         temp_channel_number_in_curr_display = find(chanindx == cfg.score_channel_eeg_frontal_number);
         for iChanDisplayed = temp_channel_number_in_curr_display
 
 
             cfg_eeg_redef_channel = [];
             cfg_eeg_redef_channel.channel = cfg.score_channel_eeg_frontal_number;
+
+            %select buffer window/channel from original data
             data_det_signal_eeg_data = ft_redefinetrial(cfg_buffered_signal_redef,ft_selectdata(cfg_eeg_redef_channel,opt.orgdata));
 
             if strcmp(cfg.markSO,'yes')
@@ -5319,7 +5340,9 @@ if strcmp(cfg.doSleepScoring,'yes')
             end
         end
 
-
+        %for display_power_spectrum, display_time_frequency, markSpindles,
+        %underlaySpindleSignal, underlayAlphaSignal
+        % select single channel (default: score_channel_eeg_number)
         temp_channel_number_in_curr_display = find(chanindx == cfg.score_channel_eeg_number);
         for iChanDisplayed = temp_channel_number_in_curr_display
 
@@ -5334,21 +5357,27 @@ if strcmp(cfg.doSleepScoring,'yes')
 
             %%%%%% Time-frequency #####
 
-            % if     isfield(cfg,'display_power_spectrum') && isfield(cfg,'display_time_frequency')
             if strcmp(cfg.display_power_spectrum,'yes') || strcmp(cfg.display_time_frequency,'yes')
 
+                %select relevant data
+                cfg_eeg_redef_channel = [];
+                cfg_eeg_redef_channel.channel = cfg.score_channel_freq_number;
+                data_det_signal_eeg_data_tfr = ft_redefinetrial(cfg_buffered_signal_redef,ft_selectdata(cfg_eeg_redef_channel,opt.orgdata));
 
-                data_det_signal_eeg_data_tfr = data_det_signal_eeg_data;
+
 
                 minFreq = 0.5;
                 maxFreq = 30;
-                FreqSteps = 0.5;
+                FreqSteps = 0.25;
                 TimeSteps = 0.1;
                 Xtick = fix(minFreq):2:fix(maxFreq);
-                
-                
+
+                 Ysteps=(max(cfg.display_tf_tf_pow_lim)-min(cfg.display_tf_tf_pow_lim))/2;
+                  Ytick=min(cfg.display_tf_tf_pow_lim):Ysteps:max(cfg.display_tf_tf_pow_lim);
+
+
                 cfg_tfr = [];
-                cfg_tfr.method    = 'wavelet';%single number (in unit of time, typically seconds) of the required snippets
+                %cfg_tfr.method    = 'wavelet';%single number (in unit of time, typically seconds) of the required snippets
                 cfg_tfr.output   = 'pow';%single number (between 0 and 1 (exclusive)) specifying the fraction of overlap between snippets (0 = no overlap)
                 cfg_tfr.foi = [minFreq:FreqSteps:maxFreq];%
                 cfg_tfr.width = 4;%7
@@ -5356,26 +5385,22 @@ if strcmp(cfg.doSleepScoring,'yes')
                 cfg_tfr.feedback = 'no';
                 cfg_tfr.keeptrials = 'no';
                 cfg_tfr.toi = [min(cellfun(@min,data_det_signal_eeg_data_tfr.time)):TimeSteps:max(cellfun(@max,data_det_signal_eeg_data_tfr.time))];
+
+                cfg_tfr.method='mtmconvol';
+                cfg_tfr.taper='dpss'; %hanning
+
+
+                fttapsmofr=[4 2];
+                cfg_tfr.tapsmofrq = linspace(fttapsmofr(1),fttapsmofr(2),length(cfg_tfr.foi));
+
+                fttimwin=[3 2];
+                cfg_tfr.t_ftimwin =linspace(fttimwin(1),fttimwin(2),length(cfg_tfr.foi));
+
+                %get spectrogram
                 data_tfr = ft_freqanalysis(cfg_tfr,data_det_signal_eeg_data_tfr);
 
+                %log10
                 data_tfr.powspctrm=log10(data_tfr.powspctrm);
-
-                %calculate power
-%     cfg_st_tfr = [];
-%     cfg_st_tfr.foi = minFreq:FreqSteps:maxFreq;
-%     cfg_st_tfr.length=TimeSteps;
-%     cfg_st_tfr.approach = 'spectrogram'; % 'spectrogram' 'mtmfft_segments' 'mtmconvol_memeff'
-%     cfg_st_tfr.taper  = 'hanning'; % 'hanning' 'hanning_proportion' 'dpss'
-%     cfg_st_tfr.transform  = 'log10'; % 'none' 'db' 'db(p+1)' 'log10' 'log10(p+1)'
-%     %cfg_st_tfr.channel = data.label;
-%     cfg_st_tfr.powvalue = 'power';
-%     data_tfr_2 = st_tfr_continuous(cfg_st_tfr, data_det_signal_eeg_data_tfr);
-
-
-%figure;
-%imagesc(squeeze(data_tfr.powspctrm))
-%imagesc(squeeze(freq_continous.powspctrm))
-
 
                 if strcmp(cfg.display_power_spectrum,'yes')
 
@@ -5384,11 +5409,15 @@ if strcmp(cfg.doSleepScoring,'yes')
                         if ishandle(cfg.f_ps)
                             figure(cfg.f_ps);
                         else
-                            cfg.f_ps = figure;
+                            cfg.f_ps = figure('units','normalized','outerposition',cfg.fig_pos_pow);
+                            set( cfg.f_ps,'NumberTitle', 'off','MenuBar','none');
+
                             figure(cfg.f_ps)
+
                         end
                     else
-                        cfg.f_ps = figure;
+                        cfg.f_ps = figure('units','normalized','outerposition',cfg.fig_pos_pow);
+                        set( cfg.f_ps,'NumberTitle', 'off','MenuBar','none');
                         figure(cfg.f_ps)
                     end
 
@@ -5400,24 +5429,30 @@ if strcmp(cfg.doSleepScoring,'yes')
                     end
                     powerspectrum = nanmean(squeeze(data_tfr.powspctrm),2);
                     freq = data_tfr.freq;
-                    bars_y = 0;
-                    for iFreq =  1:size(cfg.freq_borders,1)
-                        temp_freq_border_left = cfg.freq_borders(iFreq,1);
-                        temp_freq_border_right = cfg.freq_borders(iFreq,2);
-                        temp_mean_power = 10*log10(nanmean(powerspectrum((temp_freq_border_left <= freq) & (freq <= temp_freq_border_right))));
-                        rectangle('Position',[temp_freq_border_left,bars_y,temp_freq_border_right-temp_freq_border_left,temp_mean_power],'FaceColor',cfg.freq_colors(iFreq,:),'EdgeColor','k','LineWidth',1)
-                        if iFreq == 1 && ~ishold
-                            hold all
+
+                    if false
+                        bars_y = min(powerspectrum);
+                        for iFreq =  1:size(cfg.freq_borders,1)
+                            temp_freq_border_left = cfg.freq_borders(iFreq,1);
+                            temp_freq_border_right = cfg.freq_borders(iFreq,2);
+                            temp_mean_power = nanmean(powerspectrum((temp_freq_border_left <= freq) & (freq <= temp_freq_border_right)));
+                            rectangle('Position',[temp_freq_border_left,bars_y,temp_freq_border_right-temp_freq_border_left,temp_mean_power-bars_y],'FaceColor',cfg.freq_colors(iFreq,:),'EdgeColor','k','LineWidth',1)
+                            if iFreq == 1 && ~ishold
+                                hold all
+                            end
                         end
                     end
-                    plot(freq,10*log10(powerspectrum),'color','k','LineWidth',2);
-                    ylabel('Power [dB]');
-                    xlabel('Frequency [Hz]');
+
+                    plot(freq,(powerspectrum),'color','k','LineWidth',2);
+                    ylabel('power');
+                    xlabel('frequency (Hz)');
                     chname = data_tfr.label{1};
                     cfg.f_ps_gca = gca;
-                    title(cfg.f_ps_gca,['EEG log power Spectrum (' chname ')' ],'interpreter','none');
-                    set(cfg.f_ps_gca, 'TickDir', 'out','Xtick', Xtick);
+                    title(cfg.f_ps_gca,[chname],'interpreter','none');
+                    set(cfg.f_ps_gca, 'TickDir', 'out','Xtick', Xtick,'Ytick',Ytick,'YLim',[min(Ytick) max(Ytick)]);
                     set(cfg.f_ps, 'Name', 'Power Spectrum');
+
+                    set(cfg.f_ps,'color','w')
                     hold off
 
 
@@ -5429,7 +5464,9 @@ if strcmp(cfg.doSleepScoring,'yes')
                         if ishandle(cfg.f_tfr)
                             figure(cfg.f_tfr);
                         else
-                            cfg.f_tfr = figure;
+                            cfg.f_tfr = figure('units','normalized','outerposition',cfg.fig_pos_tf);
+                            set( cfg.f_tfr,'NumberTitle', 'off','MenuBar','none');
+
                             figure(cfg.f_tfr)
                             %set(cfg.f_tfr, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main',h});
                             %set(cfg.f_tfr, 'NumberTitle', 'off');
@@ -5437,7 +5474,8 @@ if strcmp(cfg.doSleepScoring,'yes')
                             %cfg.hhypfig = gcf;
                         end
                     else
-                        cfg.f_tfr = figure;
+                        cfg.f_tfr = figure('units','normalized','outerposition',cfg.fig_pos_tf);
+                        set( cfg.f_tfr,'NumberTitle', 'off','MenuBar','none');
                         figure(cfg.f_tfr)
                         %set(cfg.f_tfr, 'WindowButtonDownFcn',   {@select_sleep_stage_cb, 'h_main',h});
                         %set(cfg.f_tfr, 'NumberTitle', 'off');
@@ -5463,25 +5501,30 @@ if strcmp(cfg.doSleepScoring,'yes')
 
                     temp_index_display_tfr_time_points = fix(temp_index_display_tfr_time_points);
 
+                    %--signal on top of time-freq--
+                    %temp_curr_tfr_channel_signal_ylim = cfg.chanyrange(cfg.score_channel_freq_number,:)/cfg.chanscale(cfg.score_channel_freq_number);
+                    %temp_curr_tfr_channel_signal_ylim = temp_curr_tfr_channel_signal_ylim*6;
+                    temp_curr_tfr_channel_signal_ylim = cfg.display_tf_signal_lim;  %use the provide signal limits
 
-
-
-
-                    temp_curr_tfr_channel_signal_ylim = cfg.chanyrange(cfg.score_channel_eeg_number,:)/cfg.chanscale(cfg.score_channel_eeg_number);
-                    temp_curr_tfr_channel_signal_ylim = temp_curr_tfr_channel_signal_ylim*2;
-
-                    Ysteps = (max(temp_curr_tfr_channel_signal_ylim)-min(temp_curr_tfr_channel_signal_ylim))/5;
-
+                    %---ticks---
+                    %frequency ticks
                     Ytick1 = [minFreq 4:4:maxFreq];
-                    Ytick2 = [min(temp_curr_tfr_channel_signal_ylim):Ysteps:max(temp_curr_tfr_channel_signal_ylim)];
-                    Ztick = -8:4:8;
+                    %signal ticks
+                    Ysteps = (max(temp_curr_tfr_channel_signal_ylim)-min(temp_curr_tfr_channel_signal_ylim))/2;
+                    Ytick2 = min(temp_curr_tfr_channel_signal_ylim):Ysteps:max(temp_curr_tfr_channel_signal_ylim);
+                    %power ticks
+                    Zsteps=(max(cfg.display_tf_tf_pow_lim)-min(cfg.display_tf_tf_pow_lim))/2;
+                    %Ztick = -8:4:8;
+                    %Ztick= -2:1:2;
+                    Ztick=min(cfg.display_tf_tf_pow_lim):Zsteps:max(cfg.display_tf_tf_pow_lim);
+
                     cfg_tfr = [];
                     temp_time_interval_display = [min(data_tfr.time(temp_index_display_tfr_time_points)) max(data_tfr.time(temp_index_display_tfr_time_points))];
                     %cfg_tfr.baseline     = temp_time_interval_display;%normalized with reference to average power in +-0.9 s interval
                     %cfg_tfr.baselinetype = 'db'; % power in dB = 10*log_10(pwr/mean) 10*log10(data ./ meanVals);
-                    
-                    
-                    
+
+
+
                     cfg_tfr.zlim         = [min(Ztick) max(Ztick)];
                     cfg_tfr.xlim         = temp_time_interval_display;
                     cfg_tfr.ylim         = [minFreq maxFreq];
@@ -5495,19 +5538,15 @@ if strcmp(cfg.doSleepScoring,'yes')
                     %y2(2,:) = timelock.nonevents.avg * 1000000;
 
                     cfg_tfr.y2range = [min(Ytick2) max(Ytick2)];
-                    cfg_tfr.y2label = 'signal units';
-                    cfg_tfr.y2colors = [[0 0 0]];%color for second y axis default 'b'
-                    cfg_tfr.y2linestyles = ['-'];%linestylw for second y axis default '-'
-                    cfg_tfr.y2linewidths = [1.5];%lable for second y axis default 1
-                    cfg_tfr.y2alphas = [0.55];%lable for second y axis default 1
+                    cfg_tfr.y2label = 'amplitude';
+                    cfg_tfr.y2colors = [0 0 0];%color for second y axis default 'b'
+                    cfg_tfr.y2linestyles = '-';%linestylw for second y axis default '-'
+                    cfg_tfr.y2linewidths = 0.75;%lable for second y axis default 1
+                    cfg_tfr.y2alphas = 1;%lable for second y axis default 1
 
-                    %       cfg_tfr.y2colors = [[1 1 1]; [.8 .8 .8]];%color for second y axis default 'b'
-                    %       cfg_tfr.y2linestyles = ['-';'-'];%linestylw for second y axis default '-'
-                    %       cfg_tfr.y2linewidths = [3 ; 1];%lable for second y axis default 1
-                    %       cfg_tfr.y2alphas = [0.55 ; 0.55];%lable for second y axis default 1
+
 
                     cfg_tfr.colormap = parula(128);%individual_color_map_insertion(min(Ztick),max(Ztick),{stat.critval(1), stat.critval(2)},[1 1 1],jet(256)); %excludes a little bit more t-values due to imprecicion errors
-                    %cfg.colormap = cfg.colormap(end:-1:1,:);
                     cfg_tfr.interactive = 'no';
 
                     if isfield(cfg, 'f_tfr_p1gca')
@@ -5519,6 +5558,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                         end
                         %delete(cfg.f_tfr_p1gccb);
                     end
+
                     figure(cfg.f_tfr)
 
                     %set(0,'DefaultFigureVisible','off');
@@ -5530,38 +5570,53 @@ if strcmp(cfg.doSleepScoring,'yes')
                     %                         s1 = copyobj(p1gca,tt)
                     %                         s2 = copyobj(p2gca,tt)
                     %                         close(tfr_fig)
-                    set(p1gccb,'location','northoutside')
+                    set(p1gccb,'location','eastoutside')
                     set(p1gca,'xlim',cfg_tfr.x2range)
                     set(p1gca,'ylim',cfg_tfr.ylim)
+
+
+                    %align with signal axis of scorebrowser
                     pos = get(p1gca, 'Position');
-                    pos(1) = 0.055;
-                    pos(3) = 0.9;
+                    sig_h_pos=get(findall(h,'type','axes'),'Position');
+                    pos(1)=sig_h_pos(1);
+                    pos(3)=sig_h_pos(3);
                     set(p1gca, 'Position', pos)
                     set(p2gca, 'Position', pos)
 
                     cfg.f_tfr_p1gca = p1gca;
                     cfg.f_tfr_p2gca = p2gca;
                     cfg.f_tfr_p1gccb = p1gccb;
+
+                    temp_fontsize = 6;
+
+                    %frequency axis
+                    ylabel(cfg.f_tfr_p1gca,'frequency (Hz)');
+
+                    %time axis
+                    compactTimeAxis=true;
+                    if ~istrue(compactTimeAxis)
+                        xlabel(cfg.f_tfr_p1gca,'time (s)');
+                        nticks = 11;
+                        xTick = round(linspace(temp_time_interval_display(1), temp_time_interval_display(2), nticks));
+                    else %no x ticks/axis label
+                        xTick=[];
+                    end
+
+                    set(cfg.f_tfr_p1gca,'Fontsize',temp_fontsize,'FontUnits','normalized', 'Xtick', xTick, 'Ytick', Ytick1, cfg.tickInfo{:});
+
                     chname = data_tfr.label{1};
-                    title(cfg.f_tfr_p1gca,['EEG log power (' chname ') normalized to average in time window' ]);
-                    xlabel(cfg.f_tfr_p1gca,'Time [sec]');
-                    ylabel(cfg.f_tfr_p1gca,'Frequency [Hz]');
-                    nticks = 11;
-                    xTick = round(linspace(temp_time_interval_display(1), temp_time_interval_display(2), nticks));
-                    temp_fontsize = 10;
-                    set(cfg.f_tfr_p1gca,'Fontsize',temp_fontsize,'FontUnits','normalized', 'TickDir', 'out', 'Xtick', xTick, 'Ytick', Ytick1);
-                    set(cfg.f_tfr_p1gccb ,'Fontsize',temp_fontsize, 'TickDir','out','Ytick',Ztick);
-                    ylabel(cfg.f_tfr_p1gccb ,'Power/mean(power) [dB]');
-                    set(cfg.f_tfr_p2gca,'Fontsize',temp_fontsize,'FontUnits','normalized', 'TickDir', 'out','Ytick', Ytick2);
-                    set(cfg.f_tfr, 'Name', 'Time-frequency of EEG, normalized');
+                    title(cfg.f_tfr_p1gca,[chname]);%FontUnits','normalized'
 
-                    %myaa(4)
 
-                    %figure_width = 12;    % Width in inches
-                    %figure_height = 5;    % Height in inches
+                    %secondary axis
+                    set(cfg.f_tfr_p2gca,'Fontsize',temp_fontsize,'FontUnits','normalized','Ytick', Ytick2,cfg.tickInfo{:});
+                    set(cfg.f_tfr, 'Name', 'Time-frequency Power');
 
-                    %pos = get(cfg.f_tfr, 'Position');
-                    %set(cfg.f_tfr, 'Position', [pos(1) pos(2) figure_width*100, figure_height*100]); %<- Set size
+                    %color bar
+                    set(cfg.f_tfr_p1gccb ,'Fontsize',temp_fontsize,'Ytick',Ztick); %cfg.tickInfo{:}
+                    ylabel(cfg.f_tfr_p1gccb ,'power');
+
+                    set(cfg.f_tfr,'color','w')
 
                 end
 
@@ -6470,7 +6525,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                 if needredrawchanlabel
                     if opt.plotLabelFlag == 1 || (opt.plotLabelFlag == 2 && mod(i,10)==0)
 
-                         h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', chanlabelfontsize, 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
+                        h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', chanlabelfontsize, 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
                             'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.width, 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', [-1 1],'interpreter','none');
 
                         %                     h_chanlabel = ft_plot_text(tim(1)+range(tim)*0.0125, 0.5, opt.hdr.label(chanindx(i)), 'tag', 'chanlabel', 'Color', cfg.color_text_on_bg, 'FontSize', 0.9/2/numel(chanindx), 'FontUnits',  'normalized','HorizontalAlignment', 'left', ...
@@ -6841,9 +6896,6 @@ if strcmp(cfg.viewmode, 'component')
     ax(4) = max(opt.laytime.pos(:,2) + opt.laytime.height/2);
     axis(ax)
 end % plotting topographies
-
-
-
 
 
 if strcmp(cfg.doSleepScoring,'yes')

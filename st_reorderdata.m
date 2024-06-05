@@ -55,7 +55,7 @@ fprintf([functionname ' function initialized\n']);
 
 
 if isnumeric(cfg.order)
-    if size(cfg.order,1) == numel(data.label)
+    if numel(cfg.order) == numel(data.label)
         curr_chanOrder = cfg.order;
     else
         ft_error('cfg.order of length %d must be Nx1 number vector of with N = %d.',numel(cfg.order), numel(data.label))
