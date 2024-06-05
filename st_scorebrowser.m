@@ -273,6 +273,14 @@ cfg.highlightscoringchannels = ft_getopt(cfg, 'highlightscoringchannels', 'no');
 cfg.channelmaxlabels = ft_getopt(cfg, 'channelmaxlabels', 64);
 cfg.chanlabelfontsize=ft_getopt(cfg,'chanlabelfontsize','automatic'); %default: automatic (handled later)
 
+%grid lines
+cfg.drawgriddynamic = ft_getopt(cfg,'drawgriddynamic','no');
+
+cfg.drawgrid = ft_getopt(cfg,'drawgrid','yes');
+cfg.drawgrid_seconds = ft_getopt(cfg,'drawgrid_seconds',[0.5 1 3]);
+cfg.drawgrid_colors = ft_getopt(cfg,'drawgrid_colors',{[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]});
+cfg.drawgrid_LineStyle = ft_getopt(cfg,'drawgrid_LineStyle', {':' '-' '-'});
+
 %text color (sleep stage, channel label, segment)
 cfg.color_text_on_bg = ft_getopt(cfg,'color_text_on_bg', [0.75 0 0]); %original value [0.8 0.8 0.8]
 
@@ -451,10 +459,10 @@ end
 
 %cfg.highlight_scoring_channels = 'yes';
 
-cfg.drawgrid = 'yes';
-cfg.drawgrid_seconds = [0.5 1 3];
-cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]};
-cfg.drawgrid_LineStyle = {':' '-' '-'};
+% cfg.drawgrid = 'yes';
+% cfg.drawgrid_seconds = [0.5 1 3];
+% cfg.drawgrid_colors = {[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]};
+% cfg.drawgrid_LineStyle = {':' '-' '-'};
 
 
 
@@ -1774,7 +1782,7 @@ if strcmp(cfg.doSleepScoring,'yes')
     cfg.freq_borders = [0.5 4; 4 8; 8 12; 12 15; 20 30;];
     cfg.freq_colors = jet(size(cfg.freq_borders,1));
 
-    cfg.display_time_frequency = 'no';
+    %cfg.display_time_frequency = 'no';
 
     cfg.plotsignal = 'yes';
 
@@ -4896,6 +4904,7 @@ if strcmp(cfg.doSleepScoring,'yes')
         opt.nEpochInBlock = opt.nEpochsPerBlock;
     end
 
+    if istrue(cfg.drawgriddynamic) %only use values below in dynamic mode
     switch opt.nEpochsPerBlock
         case 1
             cfg.drawgrid_seconds = [0.5 1 3];
@@ -4913,6 +4922,7 @@ if strcmp(cfg.doSleepScoring,'yes')
             cfg.drawgrid_seconds = [30];
             cfg.drawgrid_colors = {[0.5 0 0]};
             cfg.drawgrid_LineStyle = {'-'};
+    end
     end
 
 
@@ -5335,6 +5345,8 @@ if strcmp(cfg.doSleepScoring,'yes')
                 FreqSteps = 0.5;
                 TimeSteps = 0.1;
                 Xtick = fix(minFreq):2:fix(maxFreq);
+                
+                
                 cfg_tfr = [];
                 cfg_tfr.method    = 'wavelet';%single number (in unit of time, typically seconds) of the required snippets
                 cfg_tfr.output   = 'pow';%single number (between 0 and 1 (exclusive)) specifying the fraction of overlap between snippets (0 = no overlap)
@@ -5345,6 +5357,24 @@ if strcmp(cfg.doSleepScoring,'yes')
                 cfg_tfr.keeptrials = 'no';
                 cfg_tfr.toi = [min(cellfun(@min,data_det_signal_eeg_data_tfr.time)):TimeSteps:max(cellfun(@max,data_det_signal_eeg_data_tfr.time))];
                 data_tfr = ft_freqanalysis(cfg_tfr,data_det_signal_eeg_data_tfr);
+
+                data_tfr.powspctrm=log10(data_tfr.powspctrm);
+
+                %calculate power
+%     cfg_st_tfr = [];
+%     cfg_st_tfr.foi = minFreq:FreqSteps:maxFreq;
+%     cfg_st_tfr.length=TimeSteps;
+%     cfg_st_tfr.approach = 'spectrogram'; % 'spectrogram' 'mtmfft_segments' 'mtmconvol_memeff'
+%     cfg_st_tfr.taper  = 'hanning'; % 'hanning' 'hanning_proportion' 'dpss'
+%     cfg_st_tfr.transform  = 'log10'; % 'none' 'db' 'db(p+1)' 'log10' 'log10(p+1)'
+%     %cfg_st_tfr.channel = data.label;
+%     cfg_st_tfr.powvalue = 'power';
+%     data_tfr_2 = st_tfr_continuous(cfg_st_tfr, data_det_signal_eeg_data_tfr);
+
+
+%figure;
+%imagesc(squeeze(data_tfr.powspctrm))
+%imagesc(squeeze(freq_continous.powspctrm))
 
 
                 if strcmp(cfg.display_power_spectrum,'yes')
@@ -5447,8 +5477,11 @@ if strcmp(cfg.doSleepScoring,'yes')
                     Ztick = -8:4:8;
                     cfg_tfr = [];
                     temp_time_interval_display = [min(data_tfr.time(temp_index_display_tfr_time_points)) max(data_tfr.time(temp_index_display_tfr_time_points))];
-                    cfg_tfr.baseline     = temp_time_interval_display;%normalized with reference to average power in +-0.9 s interval
-                    cfg_tfr.baselinetype = 'db'; % power in dB = 10*log_10(pwr/mean) 10*log10(data ./ meanVals);
+                    %cfg_tfr.baseline     = temp_time_interval_display;%normalized with reference to average power in +-0.9 s interval
+                    %cfg_tfr.baselinetype = 'db'; % power in dB = 10*log_10(pwr/mean) 10*log10(data ./ meanVals);
+                    
+                    
+                    
                     cfg_tfr.zlim         = [min(Ztick) max(Ztick)];
                     cfg_tfr.xlim         = temp_time_interval_display;
                     cfg_tfr.ylim         = [minFreq maxFreq];
@@ -5473,7 +5506,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                     %       cfg_tfr.y2linewidths = [3 ; 1];%lable for second y axis default 1
                     %       cfg_tfr.y2alphas = [0.55 ; 0.55];%lable for second y axis default 1
 
-                    cfg_tfr.colormap = jet(128);%individual_color_map_insertion(min(Ztick),max(Ztick),{stat.critval(1), stat.critval(2)},[1 1 1],jet(256)); %excludes a little bit more t-values due to imprecicion errors
+                    cfg_tfr.colormap = parula(128);%individual_color_map_insertion(min(Ztick),max(Ztick),{stat.critval(1), stat.critval(2)},[1 1 1],jet(256)); %excludes a little bit more t-values due to imprecicion errors
                     %cfg.colormap = cfg.colormap(end:-1:1,:);
                     cfg_tfr.interactive = 'no';
 

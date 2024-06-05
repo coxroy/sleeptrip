@@ -41,17 +41,18 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          'u-sleep-30s' for scoring files exported as *.txt
 %                                   from U-sleep in 30-s epochs
 %                          'nin' .mat files from the NIN
-%                          'compumedics_profusion_xml' for Compumedix Profusion software 
+%                          'compumedics_profusion_xml' for Compumedix Profusion software
 %                                   with .xml exported scorings and scoring
 %                                   events (note that cfg.scoremap can be
 %                                   defined to match the scoring)
-%                          'nautus_remlogic_xml' or 'sleep_cure_solutions_xml' or 'remlogic_xml' or 'embla_xml' 
+%                          'nautus_remlogic_xml' or 'sleep_cure_solutions_xml' or 'remlogic_xml' or 'embla_xml'
 %                                   for .xml files exported from Nautus Embla® RemLogic™ PSG Software  with scorings and scoring events
 %                                   (note that cfg.scoremap can be
 %                                   defined to match the scoring)
 %                          'sleeptrip' for scoring files exported SleepTrip as a .mat
 %                                  containing a scoring structure
 %                                  (named 'scoring')
+%                          'sleeptrip_scorebrowser_export' for txt files exported using the scorebrowser (typically named *_hypn_export.txt)
 %                          'rythm_dreem_json' for scoring files from Rythm
 %                                  Dreem head wearable files
 %
@@ -95,7 +96,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          or 'xml' (e.g. *.xml), or 'spisop' for (SpiSOP) like input, or 'fasst' (for FASST toolbox
 %                          export), (default =
 %                          'columns' (or overwritten in case the format is known to be xml))
-%   cfg.columndelimimter = string, of the column delimiter, must be either
+%   cfg.columndelimiter = string, of the column delimiter, must be either
 %                          ',', ' ', '|' or '\t' (a tab) (default = '\t')
 %   cfg.skiplines        = scalar, number of lines to skip in file (default = 0)
 %   cfg.skiplinesbefore  = string, lines skipped before line found matching string
@@ -148,7 +149,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %  arousal | 502.6 | 509.5 | 6.9      | EMG
 %  ...     | ...   | ...   | ...      | channel
 %  ---------------------------------------------
-% 
+%
 % note that channel can also be used with placeholders like E*G and that
 % stop is the optional field as start and duration are already sufficient
 % columns/values (so the stop column is redundant)
@@ -202,7 +203,7 @@ end
 cfg.scoringformat      = ft_getopt(cfg, 'scoringformat', 'custom');
 cfg.standard           = ft_getopt(cfg, 'standard', 'aasm');
 cfg.datatype           = ft_getopt(cfg, 'datatype', 'columns');
-cfg.columndelimimter   = ft_getopt(cfg, 'columndelimimter', '\t');
+cfg.columndelimiter   = ft_getopt(cfg, 'columndelimiter', '\t');
 cfg.skiplines          = ft_getopt(cfg, 'skiplines', 0);
 cfg.skiplinesbefore    = ft_getopt(cfg, 'skiplinesbefore', '');
 cfg.ignorelines        = ft_getopt(cfg, 'ignorelines', {});
@@ -249,7 +250,7 @@ if isfield(cfg,'scoremap')
 end
 
 if isfield(cfg,'scoremap')
-   % ft_warning('setting cfg.standard = ''custom'' because a cfg.scoremap is defined in the configuration.');
+    % ft_warning('setting cfg.standard = ''custom'' because a cfg.scoremap is defined in the configuration.');
     if ~isfield(cfg,'to')
         ft_warning('You might want to define cfg.to as well to be explicit to which standard you want to convert to.');
     end
@@ -266,11 +267,11 @@ if nargin<2
     if ~exist(filename, 'file')
         ft_error('The scoring file "%s" file was not found, cannot read in scoring information. No scoring created.', filename);
     end
-    
-    fileendings = {'.tsv','.csv'};
-    
+
+    fileendings = {'.tsv','.csv'}; %RC: check if makes sense to add .txt
+
     for iFileending = 1:numel(fileendings)
-        cfg.scoringarousalsfile = ft_getopt(cfg, 'scoringarousalsfile', [cfg.scoringfile '.arousals' fileendings{iFileending}] );
+        cfg.scoringarousalsfile = ft_getopt(cfg, 'scoringarousalsfile', [cfg.scoringfile '.arousals' fileendings{iFileending}] ); %RC: .arousals added after file extension (also for artifacts and events below)
         filename_arousals = fetch_url(cfg.scoringarousalsfile);
         filename_arousals_ending = fileendings{iFileending};
         if ~exist(filename_arousals, 'file')
@@ -279,9 +280,9 @@ if nargin<2
         else
             break
         end
-        
+
     end
-    
+
     for iFileending = 1:numel(fileendings)
         cfg.scoringartifactfile = ft_getopt(cfg, 'scoringartifactfile', [cfg.scoringfile '.artifact' fileendings{iFileending}] );
         filename_artifacts = fetch_url(cfg.scoringartifactfile);
@@ -293,7 +294,7 @@ if nargin<2
             break
         end
     end
-    
+
     for iFileending = 1:numel(fileendings)
         cfg.scoringeventsfile = ft_getopt(cfg, 'scoringeventsfile', [cfg.scoringfile '.events' fileendings{iFileending}] );
         filename_events = fetch_url(cfg.scoringeventsfile);
@@ -323,6 +324,13 @@ switch  cfg.scoringformat
     case 'custom'
         % do nothing
         scoremap = cfg.scoremap;
+    case 'sleeptrip_scorebrowser_export'
+        scoremap = [];
+        scoremap.labelold  = {'0', '1',  '2',  '3',  '5'};
+        scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'R'};
+        scoremap.unknown   = '?';
+
+        cfg.exclepochs = 'yes'; %use second column as excluded
     case 'zmax'
         % ZMax exported csv
         scoremap = [];
@@ -335,9 +343,9 @@ switch  cfg.scoringformat
                 scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'R', '?'};
         end
         scoremap.unknown   = '?';
-        
+
         %cfg.scoremap         = scoremap;
-        cfg.columndelimimter = ',';
+        cfg.columndelimiter = ',';
         cfg.ignorelines      = {'LOUT','LON'};
         cfg.columnnum        = 4;
     case 'zmax_autoscored'
@@ -352,36 +360,36 @@ switch  cfg.scoringformat
                 scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'R', '?'};
         end
         scoremap.unknown   = '?';
-        
+
         %cfg.scoremap         = scoremap;
-        cfg.columndelimimter = ',';
+        cfg.columndelimiter = ',';
         %cfg.ignorelines      = {'LOUT','LON'};
         cfg.columnnum        = 1;
-        
+
     case {'somnomedics_english', 'somnomedics', 'somnomedics_txt_english','somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german', 'somnomedics_xlsx_english', 'somnomedics_xlsx'}
-        
+
         %cfg.scoremap         = scoremap;
-        cfg.columndelimimter = ';';
+        cfg.columndelimiter = ';';
         cfg.skiplines        = 7;
         cfg.columnnum        = 2;
-        
+
         switch cfg.scoringformat
             % Somnomedics English or German version exported profile xlsx
             case {'somnomedics_xlsx'}
-                try 
+                try
                     readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet','Sleep profile');
                     cfg.scoringformat = 'somnomedics_xlsx_english';
                 catch
-                    
+
                 end
-                try 
+                try
                     readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet','Schlafprofil');
                     cfg.scoringformat = 'somnomedics_xlsx_german';
                 catch
-                    
+
                 end
         end
-                
+
         scoremap = [];
         % Somnomedics german or english version exported profile txt
         switch cfg.scoringformat
@@ -394,7 +402,7 @@ switch  cfg.scoringformat
                         ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
                         scoremap.labelnew  = {'W', 'W', 'S1', 'S2', 'S3', 'R', 'R', '?', '?'};
                 end
-                
+
             case {'somnomedics_german','somnomedics_txt_german','somnomedics_xlsx_german'}
                 scoremap.labelold  = {'Wach','WACH', 'Stadium 1', 'STADIUM 1', 'S1', 'N1', 'Stadium 2', 'STADIUM 2', 'S2', 'N2', 'Stadium 3', 'STADIUM 3', 'S3', 'N3', 'Stadium 4', 'STADIUM 4', 'S4', 'N4', 'REM','Rem', 'Artefact', 'A', 'Bewegung', 'MT'};
                 switch cfg.standard
@@ -404,14 +412,14 @@ switch  cfg.scoringformat
                         ft_warning('the somnomedics data format is typically in AASM scoring, converting it to Rechtschaffen&Kales might distort results.')
                         scoremap.labelnew  = {'W', 'W', 'S1', 'S1', 'S1', 'S1', 'S2', 'S2', 'S2', 'S2', 'S3', 'S3', 'S3', 'S3', 'S4', 'S4', 'S4', 'S4', 'R', 'R', '?', '?', 'W', 'W'};
                 end
-                
-                
+
+
         end
-        
+
         scoremap.unknown   = '?';
-        
+
         dtformats = {'dd.MM.yyyy HH:mm:ss', 'dd-MMM-yyyy HH:mm:ss', 'dd.MMM.yyyy HH:mm:ss.SSS', 'dd-MMM-yyyy HH:mm:ss.SSS'};
-        
+
         switch cfg.scoringformat
             case {'somnomedics_xlsx_english', 'somnomedics_xlsx'}
                 arousal_sheet_name = 'Classification Arousals';
@@ -420,21 +428,21 @@ switch  cfg.scoringformat
                 arousal_sheet_name = 'Klassifizierte Arousal';
                 scoring_sheet_name = 'Schlafprofil';
         end
-         
+
         switch cfg.scoringformat
             case {'somnomedics_xlsx_german', 'somnomedics_xlsx_english', 'somnomedics_xlsx'}
                 processTableStucture = true;
-                
-                
-                
+
+
+
                 try % due to conflicting Matlab conventions in readtable parameters in different matlab versions
                     tb_sc = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',scoring_sheet_name,'DatetimeType','text');
                 catch
                     tb_sc = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',scoring_sheet_name);
                 end
                 start_datetime_offset_scoring_string = tb_sc{find(ismember(tb_sc{:,1},'Start Time'),1,'first'),2};
-                
-                
+
+
                 for iDtFormats = 1:numel(dtformats)
                     try
                         scoring.scoringstartdatetime = datetime(start_datetime_offset_scoring_string,'InputFormat',dtformats{iDtFormats});
@@ -444,12 +452,12 @@ switch  cfg.scoringformat
                 end
                 tableScoring = tb_sc((cfg.skiplines+1):end,:);
                 readoption = 'table';
-                
-                
+
+
                 % the arousals are a separate sheet in the
                 % same excel .xlsx file, otherwise use the
                 % previous arousal definition
-                
+
                 if isempty(filename_arousals)
                     filename_arousals = cfg.scoringfile;
                     try
@@ -458,44 +466,44 @@ switch  cfg.scoringformat
                         catch
                             tb_a = readtable(cfg.scoringfile,'ReadRowNames',false,'Sheet',arousal_sheet_name);
                         end
-                        
+
                         start_datetime_offset_string = tb_a{find(ismember(tb_a{:,1},'Start Time'),1,'first'),2};
-                        
+
                         if ismember('SignalID',tb_a.Properties.VariableNames)
                             tb_a = tb_a((cfg.skiplines+1):end,:);
-                            
+
                         end
                         if size(tb_a,1) > 0
-                            
-                            
+
+
                             for iDtFormats = 1:numel(dtformats)
                                 try
                                     dt = datetime(tb_a{1:end,1},'InputFormat',dtformats{iDtFormats});
                                     start_a = datenum(dt-scoring.scoringstartdatetime)*24*3600;
-                                    
+
                                     dt = datetime(tb_a{1:end,2},'InputFormat',dtformats{iDtFormats});
                                     stop_a = datenum(dt-scoring.scoringstartdatetime)*24*3600;
                                     break
                                 catch
                                 end
                             end
-                            
+
                             duration_a = stop_a - start_a;
-                            
+
                             event_a = tb_a{1:end,4};
-                            
+
                             tableArousal = table(event_a,start_a,stop_a,duration_a,'VariableNames',{'event','start','stop','duration'});
                             tableArousal.channel = repmat('all',size(tableArousal,1),1);
-                            
+
                         end
-                        
+
                         if ~isempty(tableArousal)
                             tableArousal = tableArousal;
                             hasArousals = true;
                             filename_arousals = []; % reset this again so no
                         end
                     catch
-                        
+
                     end
                     filename_arousals = []; % reset this again so no further reading in later in code
                 end
@@ -504,15 +512,15 @@ switch  cfg.scoringformat
                 parampairs = {};
                 parampairs = [parampairs, {'ReadVariableNames',false}];
                 %parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
-                
+
                 if ~isempty(cfg.filetype)
                     parampairs = [parampairs, {'FileType',cfg.filetype}];
                 end
-                
-                if ~isempty(cfg.columndelimimter)
-                    parampairs = [parampairs, {'Delimiter',cfg.columndelimimter}];
+
+                if ~isempty(cfg.columndelimiter)
+                    parampairs = [parampairs, {'Delimiter',cfg.columndelimiter}];
                 end
-                
+
                 if ~isempty(cfg.fileencoding)
                     parampairs = [parampairs, {'FileEncoding',cfg.fileencoding}];
                 end
@@ -536,12 +544,12 @@ switch  cfg.scoringformat
                 scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', 'MT', '?'};
         end
         scoremap.unknown   = '?';
-        
+
         %cfg.scoremap         = scoremap;
         cfg.columnnum        = 1;
         cfg.exclepochs       = 'yes';
         cfg.exclcolumnnum    = 2;
-        cfg.columndelimimter = '';
+        cfg.columndelimiter = '';
         cfg.exclcolumnstr = {'1' '2' '3' '4' '5' '6' '7' '8' '9' '10'};
         readoption = 'load';
     case {'fasst'}
@@ -554,7 +562,7 @@ switch  cfg.scoringformat
                 scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?'};
         end
         scoremap.unknown   = '?';
-        
+
         %cfg.scoremap         = scoremap;
         cfg.columnnum        = 1;
     case {'u-sleep-30s'}
@@ -584,7 +592,7 @@ switch  cfg.scoringformat
                 scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'S4', 'R', '?'};
         end
         scoremap.unknown   = '?';
-        
+
         %cfg.scoremap         = scoremap;
         load(filename,'sleepscore')
         rawScores_NB = sleepscore(:,1); %column vector of Neurobit scores (values from [0 1 2 3 5])
@@ -606,27 +614,27 @@ switch  cfg.scoringformat
         else
             scoremap = cfg.scoremap;
         end
-        
-       
-      
+
+
+
         import javax.xml.xpath.*
-        
+
         doc = xmlread(filename);
         factory = XPathFactory.newInstance;
-        
+
         xpath = factory.newXPath;
-        
+
         % <SleepStages>
         % <SleepStage>0</SleepStage>
         % <SleepStage>0</SleepStage>
         % <SleepStage>0</SleepStage>
-                
+
         %eventtypes
         expression = xpath.compile('//SleepStages/SleepStage/text()');
         %expression = xpath.compile('//ScoredEvents/ScoredEvent[./Name/text()='Arousal (ASDA)']');
 
         eventStageValue = getValuesByExpression(doc,expression);
-        
+
         expression = xpath.compile('//EpochLength/text()');
         eventEpochLengthValue = getValuesByExpression(doc,expression);
         if ~isempty(eventEpochLengthValue)
@@ -635,14 +643,14 @@ switch  cfg.scoringformat
                 ft_error('The requested cfg.epochlength = ''%d'' does not match the epoch length defined in the scoring file with %d seconds. Change cfg.epochlength accordingly.',cfg.epochlength, epochlength)
             end
         end
-            
+
         tableScoring = table(eventStageValue,'VariableNames',{'stage'});
-        
+
 
         % <Name>SpO2 artifact</Name>
         % <Start>17.3</Start>
         % <Duration>39.1</Duration>
-        
+
         expression = xpath.compile('//ScoredEvents/ScoredEvent[contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL'')]/Name/text()');
         eventNames = getValuesByExpression(doc,expression);
         expression = xpath.compile('//ScoredEvents/ScoredEvent[contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL'')]/Start/text()');
@@ -651,13 +659,13 @@ switch  cfg.scoringformat
         eventDurations = getValuesByExpression(doc,expression);
         expression = xpath.compile('//ScoredEvents/ScoredEvent[contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL'')]/Input/text()');
         eventInputs = getValuesByExpression(doc,expression);
-        
+
         if ~isempty(eventNames)
             tableArousal = table(eventNames','VariableNames',{'event'});
             tableArousal = cat(2,tableArousal,table(cellfun(@str2num,eventStarts,'UniformOutput',true)',cellfun(@str2num,eventStarts,'UniformOutput',true)'+cellfun(@str2num,eventDurations,'UniformOutput',true)',cellfun(@str2num,eventDurations,'UniformOutput',true)','VariableNames',{'start','stop','duration'}));
             tableArousal = cat(2,tableArousal,table(eventInputs','VariableNames',{'channel'}));
         end
-        
+
         expression = xpath.compile('//ScoredEvents/ScoredEvent[not(contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL''))]/Name/text()');
         eventNames = getValuesByExpression(doc,expression);
         expression = xpath.compile('//ScoredEvents/ScoredEvent[not(contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL''))]/Start/text()');
@@ -666,39 +674,39 @@ switch  cfg.scoringformat
         eventDurations = getValuesByExpression(doc,expression);
         expression = xpath.compile('//ScoredEvents/ScoredEvent[not(contains(./Name/text(), ''Arousal'') or contains(./Name/text(), ''AROUSAL''))]/Input/text()');
         eventInputs = getValuesByExpression(doc,expression);
-        
+
         if ~isempty(eventNames)
             tableEvents = table(eventNames','VariableNames',{'event'});
             tableEvents = cat(2,tableEvents,table(cellfun(@str2num,eventStarts,'UniformOutput',true)',cellfun(@str2num,eventStarts,'UniformOutput',true)'+cellfun(@str2num,eventDurations,'UniformOutput',true)',cellfun(@str2num,eventDurations,'UniformOutput',true)','VariableNames',{'start','stop','duration'}));
             tableEvents = cat(2,tableEvents,table(eventInputs','VariableNames',{'channel'}));
         end
-        
+
         tableScoring = tableScoring;
-        
+
         if ~isempty(tableArousal)
             tableArousal = tableArousal;
             hasArousals = true;
         end
-%         if ~isempty(tableLightsOff)
-%         	lightsoff_from_scoring_offset = tableLightsOff.start(end);
-%             hasLightsOff = true;
-%         end
-%         if ~isempty(tableLightsOff)
-%             lightson_from_scoring_offset = tableLightsOn.start(1);
-%             hasLightsOn = true;
-%         end
+        %         if ~isempty(tableLightsOff)
+        %         	lightsoff_from_scoring_offset = tableLightsOff.start(end);
+        %             hasLightsOff = true;
+        %         end
+        %         if ~isempty(tableLightsOff)
+        %             lightson_from_scoring_offset = tableLightsOn.start(1);
+        %             hasLightsOn = true;
+        %         end
         if ~isempty(tableEvents)
             tableEvents = tableEvents;
             hasEvents = true;
         end
-        
+
         cfg.columnnum        = 1;
         %cfg.exclepochs       = 'no';
         %cfg.exclcolumnnum    = 2;
         processTableStucture = true;
-        
+
         readoption = 'xml';
-        
+
     case {'nautus_remlogic_xml', 'sleep_cure_solutions_xml', 'remlogic_xml', 'embla_xml'} % of Nautus, Embla® RemLogic™ PSG Software
         if ~isfield(cfg, 'scoremap')
             scoremap = [];
@@ -714,95 +722,95 @@ switch  cfg.scoringformat
         else
             scoremap = cfg.scoremap;
         end
-        
-        
+
+
         dtformat = 'yyyy-MM-dd''T''HH:mm:ss.SSSSSSS';
         %datetimeDiffToOffsetInSeconds(offsetdts,dts,dtformat)
         %offsetdts = '2021-03-10T00:04:00.773124';
         %dts = '2021-03-10T00:05:01.884235';
-      
+
         import javax.xml.xpath.*
-        
+
         doc = xmlread(filename);
         factory = XPathFactory.newInstance;
-        
+
         xpath = factory.newXPath;
-        
+
         % <Events>
         % <Event>
         % <Type dt:dt="string">SLEEP-S0</Type>
         % <Location dt:dt="string">EEG-C3-M2</Location>
         % <StartTime dt:dt="string">2021-03-09T21:10:21.000000</StartTime>
         % <StopTime dt:dt="string">2021-03-09T21:10:51.000000</StopTime>
-        
-        
-        
+
+
+
         eventtypes_stage = scoremap.labelold;
         %eventtypes_stage = {'SLEEP-S0', 'SLEEP-S1', 'SLEEP-S2', 'SLEEP-S3', 'SLEEP-REM', 'SLEEP-UNSCORED'};
         eventtypes_lighsoff = {'LIGHTS-OFF'};
         eventtypes_lighson = {'LIGHTS-ON'};
         eventtypes_arousal = { 'AROUSAL'};
-        
+
         %eventtypes
         expression = xpath.compile('//EventTypes/EventType[*]/text()');
         eventTypes = getValuesByExpression(doc,expression);
-        
+
         expression = xpath.compile('//Events/Event[*]/Type/text()');
         evenTypeValues = getValuesByExpression(doc,expression);
-        
+
         expression = xpath.compile('//Events/Event[*]/Location/text()');
         evenTypeLocations = getValuesByExpression(doc,expression);
-        
+
         expression = xpath.compile('//Events/Event[*]/StartTime/text()');
         evenTypeStartTimes = getValuesByExpression(doc,expression);
-        
+
         expression = xpath.compile('//Events/Event[*]/StopTime/text()');
         evenTypeStopTimes = getValuesByExpression(doc,expression);
-        
-        
+
+
         first_sleep_stage = find(logical(ismember(evenTypeValues,eventtypes_stage)'),1,'first');
         if ~isempty(first_sleep_stage)
             offsetdts = evenTypeStartTimes{first_sleep_stage};
         end
-        
-        
+
+
         if (numel(evenTypeValues) ~= numel(evenTypeStartTimes)) || (numel(evenTypeValues) ~= numel(evenTypeStopTimes))
             ft_error('the Events are inconsistent with regard to the presence in their XML children: Type, StartTime, StopTime')
         end
-        
+
         %offsetdts = '2021-03-10T00:04:00.773124';
         %dts = '2021-03-10T00:05:01.884235';
         dtformat = 'yyyy-MM-dd''T''HH:mm:ss.SSSSSSS';
         tableScoring = table({},'VariableNames',{'stage'});
         tableScoring = cat(2,tableScoring,table([],[],[],'VariableNames',{'start','stop','duration'}));
         tableScoring = cat(2,tableScoring,table({},'VariableNames',{'channel'}));
-        
+
         tableArousal = table({},'VariableNames',{'event'});
         tableArousal = cat(2,tableArousal,table([],[],[],'VariableNames',{'start','stop','duration'}));
         tableArousal = cat(2,tableArousal,table({},'VariableNames',{'channel'}));
-        
+
         tableLightsOff = table({},'VariableNames',{'event'});
         tableLightsOff = cat(2,tableLightsOff,table([],[],[],'VariableNames',{'start','stop','duration'}));
         tableLightsOff = cat(2,tableLightsOff,table({},'VariableNames',{'channel'}));
-        
+
         tableLightsOn = table({},'VariableNames',{'event'});
         tableLightsOn = cat(2,tableLightsOn,table([],[],[],'VariableNames',{'start','stop','duration'}));
         tableLightsOn = cat(2,tableLightsOn,table({},'VariableNames',{'channel'}));
-        
+
         tableEvents = table({},'VariableNames',{'event'});
         tableEvents = cat(2,tableEvents,table([],[],[],'VariableNames',{'start','stop','duration'}));
         tableEvents = cat(2,tableEvents,table({},'VariableNames',{'channel'}));
 
-        
+
         for iEvents = 1:numel(evenTypeValues)
             ev_name = strtrim(evenTypeValues{iEvents});
-            
+
             ev_time_start = datetimeDiffToOffsetInSeconds(offsetdts,evenTypeStartTimes{iEvents},dtformat);
             ev_time_stop = datetimeDiffToOffsetInSeconds(offsetdts,evenTypeStopTimes{iEvents},dtformat);
             ev_time_duration =  ev_time_stop-ev_time_start;
             ev_channel = strtrim(evenTypeLocations{iEvents});
 
-            
+
             switch ev_name
                 case eventtypes_stage
                     tableScoring = cat(1,tableScoring,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'stage','start','stop','duration','channel'}));
@@ -813,20 +821,20 @@ switch  cfg.scoringformat
                 case eventtypes_arousal
                     tableArousal = cat(1,tableArousal,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'event','start','stop','duration','channel'}));
                 otherwise
-                	tableEvents = cat(1,tableEvents,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'event','start','stop','duration','channel'}));
+                    tableEvents = cat(1,tableEvents,table({ev_name},ev_time_start,ev_time_stop,ev_time_duration,{ev_channel},'VariableNames',{'event','start','stop','duration','channel'}));
                     ft_warning('an event with name name %s was not covered by the reading function',ev_name)
             end
         end
-        
+
         tableScoring = tableScoring;
-        
+
         if any(round(tableScoring.duration/cfg.epochlength,3) ~= 1)
             ft_error('cfg.epochlength = ''%d'' does not match the duration of all the epochs detected.',cfg.epochlength)
         end
         if any(round(tableScoring.start + tableScoring.duration,3) ~= round(tableScoring.stop,3))
-        	ft_error('There is at least one epoch missing that is missing after detected epochs number ',strjoin(num2str(find(round(tableScoring.start + tableScoring.duration,3) ~= round(tableScoring.stop,3)))'))
+            ft_error('There is at least one epoch missing that is missing after detected epochs number ',strjoin(num2str(find(round(tableScoring.start + tableScoring.duration,3) ~= round(tableScoring.stop,3)))'))
         end
-        
+
         if ~isempty(tableArousal)
             tableArousal = tableArousal;
             hasArousals = true;
@@ -836,7 +844,7 @@ switch  cfg.scoringformat
             hasArtifacts = true;
         end
         if ~isempty(tableLightsOff)
-        	lightsoff_from_scoring_offset = tableLightsOff.start(end);
+            lightsoff_from_scoring_offset = tableLightsOff.start(end);
             hasLightsOff = true;
         end
         if ~isempty(tableLightsOn)
@@ -852,18 +860,18 @@ switch  cfg.scoringformat
         %cfg.exclepochs       = 'no';
         %cfg.exclcolumnnum    = 2;
         processTableStucture = true;
-        
+
         readoption = 'xml';
     case {'rythm_dreem_json'}
         % The sleep stages are as follows:
-        % 0: wake, 
+        % 0: wake,
         % 1: N1,
-        % 2: N2, 
-        % 3: N3, 
+        % 2: N2,
+        % 3: N3,
         % 4:REM
 
         json = read_json(filename);
-        
+
         scoremap = [];
         scoremap.labelold  = {'0','1', '2', '3', '4', '?'};
         switch cfg.standard
@@ -874,54 +882,54 @@ switch  cfg.scoringformat
                 scoremap.labelnew  = {'W', 'S1', 'S2', 'S3', 'R', '?'};
         end
         scoremap.unknown   = '?';
-        
+
         json = ft_struct2string(json)';
-        
+
         tableScoring = table(json,'VariableNames',{'stage'});
 
         cfg.columnnum        = 1;
         %cfg.exclepochs       = 'no';
         %cfg.exclcolumnnum    = 2;
         processTableStucture = true;
-        
+
         readoption = 'json';
-        
+
     case {'sleeptrip'}
         readoption = 'loadmat';
     otherwise
 end
 
-switch cfg.datatype 
+switch cfg.datatype
     case 'columns'
     case 'xml'
         readoption = 'xml';
     case 'json'
         readoption = 'json';
     otherwise
-    ft_error('cfg.datatype = ''%s'' unknown',cfg.datatype);
+        ft_error('cfg.datatype = ''%s'' unknown',cfg.datatype);
 end
 
 
 switch readoption
     case 'xml'
-        
+
     case 'json'
-        
-    case 'table';
+
+    case 'table'
         tableScoring = tableScoring;
     case 'readtable'
         parampairs = {};
         parampairs = [parampairs, {'ReadVariableNames',false}];
         %parampairs = [parampairs, {'HeaderLines',cfg.skiplines}];
-        
+
         if ~isempty(cfg.filetype)
-        	parampairs = [parampairs, {'FileType',cfg.filetype}];
+            parampairs = [parampairs, {'FileType',cfg.filetype}];
         end
-        
-        if ~isempty(cfg.columndelimimter)
-            parampairs = [parampairs, {'Delimiter',cfg.columndelimimter}];
+
+        if ~isempty(cfg.columndelimiter)
+            parampairs = [parampairs, {'Delimiter',cfg.columndelimiter}];
         end
-        
+
         if ~isempty(cfg.fileencoding)
             parampairs = [parampairs, {'FileEncoding',cfg.fileencoding}];
         end
@@ -943,24 +951,24 @@ switch readoption
 end
 
 if processTableStucture
-    
+
     tableScoringNcols = size(tableScoring,2);
-    
+
     if tableScoringNcols < cfg.columnnum
         ft_error('The scoring did contain only %d columns.\n The requested column number %d was not present.\n No epochs read in.', tableScoringNcols, cfg.columnnum);
     end
-    
+
     if ~isempty(cfg.ignorelines) || ~isempty(cfg.selectlines)
         startline = tableScoring{:,1};
         if isfloat(startline)
             startline = cellstr(num2str(startline));
         end
-        
+
         ignore = logical(zeros(size(tableScoring,1),1));
         if ~isempty(cfg.ignorelines)
             ignore = cellfun(@(x)  any(startsWith(x, cfg.ignorelines)), startline, 'UniformOutput', 1);
         end
-        
+
         select = logical(ones(size(tableScoring,1),1));
         if ~isempty(cfg.selectlines)
             select = cellfun(@(x)  any(startsWith(x, cfg.selectlines)), startline, 'UniformOutput', 1);
@@ -969,24 +977,24 @@ if processTableStucture
         tableScoring = tableScoring((select & ~ignore),:);
         tableScoringNcols = size(tableScoring,2);
     end
-    
-    
+
+
     % if ~isfield(cfg,'scoremap')
     %     ft_error('No scoremap was defined in the configuration file. Cannot translate scoring.');
     % else
     %
     % end
-    
+
     if numel(scoremap.labelold) ~= numel(scoremap.labelnew)
         ft_error('Size of cfg.scoremap.labelold and cfg.scoremap.labelold does not match. Cannot translate scoring.');
     end
-    
+
     if strcmp(cfg.exclepochs, 'yes')
         if tableScoringNcols < cfg.exclcolumnnum
             ft_warning('The scoring did contain only %d columns.\n The requested column number %d was not present.\n No epochs read for exclusion.', tableScoringNcols, cfg.exclcolumnnum);
         end
     end
-    
+
     scoring = [];
     scoring.ori = [];
     scoring.ori.epochs = tableScoring{:,cfg.columnnum};
@@ -996,13 +1004,13 @@ if processTableStucture
     if isfloat(scoring.ori.epochs)
         scoring.ori.epochs = cellstr(arrayfun(@(x) sprintf('%d', x), scoring.ori.epochs, 'UniformOutput', false));
     end
-    
+
     if strcmp(cfg.exclepochs, 'yes')
         if isfloat(scoring.ori.excluded)
             scoring.ori.excluded = cellstr(arrayfun(@(x) sprintf('%d', x), scoring.ori.excluded, 'UniformOutput', false));
         end
     end
-    
+
     scoring.epochs = cell(1,numel(scoring.ori.epochs));
     scoring.epochs(:) = {scoremap.unknown};
     match_cum = logical(zeros(numel(scoring.ori.epochs),1));
@@ -1013,11 +1021,11 @@ if processTableStucture
         match_cum = match_cum | logical(match(:));
         scoring.epochs(match) = {new};
     end
-    
+
     if any(~match_cum)
         ft_warning('The sleep stages ''%s'' in the original/raw scoring were not covered in the scoremap and have thus been set to ''%s''',strjoin(unique(scoring.ori.epochs(~match_cum))),scoremap.unknown)
     end
-    
+
     scoring.excluded = logical(zeros(1,numel(scoring.ori.epochs)));
     if strcmp(cfg.exclepochs, 'yes')
         %for iLabel = 1
@@ -1025,17 +1033,17 @@ if processTableStucture
         scoring.excluded(match) = true;
         %end
     end
-    
+
     if ~isempty(scoremap)
         scoring.ori.scoremap   = scoremap;
     end
     scoring.ori.scoringfile   = cfg.scoringfile;
     scoring.ori.scoringformat   = cfg.scoringformat;
     scoring.ori.table = tableScoring;
-    
+
     scoring.label = unique(scoremap.labelnew)';
     scoring.label = ({scoring.label{:}})';%assure the vertical orientation
-    
+
     scoring.cfg = cfg;
     scoring.epochlength = cfg.epochlength;
     scoring.dataoffset = cfg.dataoffset;
@@ -1067,56 +1075,56 @@ if processTableStucture
     if hasArtifacts
         switch cfg.eventsoffset
             case 'scoringonset'
-        tableArtifacts.start = tableArtifacts.start + scoring.dataoffset;
-        tableArtifacts.stop = tableArtifacts.stop + scoring.dataoffset;
+                tableArtifacts.start = tableArtifacts.start + scoring.dataoffset;
+                tableArtifacts.stop = tableArtifacts.stop + scoring.dataoffset;
         end
         scoring.artifacts = tableArtifacts;
     end
     if hasEvents
         switch cfg.eventsoffset
             case 'scoringonset'
-        tableEvents.start = tableEvents.start + scoring.dataoffset;
-        tableEvents.stop = tableEvents.stop + scoring.dataoffset;
+                tableEvents.start = tableEvents.start + scoring.dataoffset;
+                tableEvents.stop = tableEvents.stop + scoring.dataoffset;
         end
         scoring.events = tableEvents;
     end
-    
+
 end
 
 if nargin<2
-if ~isempty(filename_arousals)
-    
-    switch filename_arousals_ending
-        case '.tsv'
-            tableArousal = readtable(filename_arousals,'FileType','text','ReadVariableNames',true,'Delimiter','\t');
-        otherwise
-            tableArousal = readtable(filename_arousals,'FileType','text','ReadVariableNames',true);
+    if ~isempty(filename_arousals)
+
+        switch filename_arousals_ending
+            case '.tsv'
+                tableArousal = readtable(filename_arousals,'FileType','text','ReadVariableNames',true,'Delimiter','\t');
+            otherwise
+                tableArousal = readtable(filename_arousals,'FileType','text','ReadVariableNames',true);
+        end
+
+        if ~ismember({'stop'}, tableArousal.Properties.VariableNames)
+            tableArousal.stop = tableArousal.start + tableArousal.duration;
+        end
+
+        if ~ismember({'duration'}, tableArousal.Properties.VariableNames)
+            tableArousal.duration = tableArousal.stop - tableArousal.start;
+        end
+
+        if ~ismember({'channel'}, tableArousal.Properties.VariableNames)
+            tableArousal.channel = repmat('all',size(tableArousal,1),1);
+        end
+
+        switch cfg.eventsoffset
+            case 'scoringonset'
+                tableArousal.start = tableArousal.start + scoring.dataoffset;
+                tableArousal.stop = tableArousal.stop + scoring.dataoffset;
+        end
+        if isfield(scoring, 'arousals')
+            scoring.arousals = unique(cat(1,scoring.arousals,tableArousal));
+        else
+            scoring.arousals = tableArousal;
+        end
+
     end
-    
-    if ~ismember({'stop'}, tableArousal.Properties.VariableNames)
-        tableArousal.stop = tableArousal.start + tableArousal.duration;
-    end
-    
-    if ~ismember({'duration'}, tableArousal.Properties.VariableNames)
-        tableArousal.duration = tableArousal.stop - tableArousal.start;
-    end
-    
-    if ~ismember({'channel'}, tableArousal.Properties.VariableNames)
-        tableArousal.channel = repmat('all',size(tableArousal,1),1);
-    end
-    
-    switch cfg.eventsoffset
-        case 'scoringonset'
-            tableArousal.start = tableArousal.start + scoring.dataoffset;
-            tableArousal.stop = tableArousal.stop + scoring.dataoffset;
-    end
-    if isfield(scoring, 'arousals')
-        scoring.arousals = unique(cat(1,scoring.arousals,tableArousal));
-    else
-        scoring.arousals = tableArousal;
-    end
-    
-end
 end
 
 if nargin<2
@@ -1127,19 +1135,19 @@ if nargin<2
             otherwise
                 tableArtifacts = readtable(filename_artifacts,'FileType','text','ReadVariableNames',true);
         end
-        
+
         if ~ismember({'stop'}, tableArtifacts.Properties.VariableNames)
             tableArtifacts.stop = tableArtifacts.start + tableArtifacts.duration;
         end
-        
+
         if ~ismember({'duration'}, tableArtifacts.Properties.VariableNames)
             tableArtifacts.duration = tableArtifacts.stop - tableArtifacts.start;
         end
-        
+
         if ~ismember({'channel'}, tableArtifacts.Properties.VariableNames)
             tableArtifacts.channel = repmat('all',size(tableArtifacts,1),1);
         end
-        
+
         switch cfg.eventsoffset
             case 'scoringonset'
                 tableArtifacts.start = tableArtifacts.start + scoring.dataoffset;
@@ -1150,48 +1158,48 @@ if nargin<2
         else
             scoring.artifacts = tableArtifacts;
         end
-        
+
     end
 end
 
 
 if nargin<2
     if ~isempty(filename_events)
-        
+
         switch filename_events_ending
             case '.tsv'
                 tableEvents = readtable(filename_events,'FileType','text','ReadVariableNames',true,'Delimiter','\t');
             otherwise
                 tableEvents = readtable(filename_events,'FileType','text','ReadVariableNames',true);
         end
-        
+
         if ~ismember({'stop'}, tableEvents.Properties.VariableNames)
             tableEvents.stop = tableEvents.start + tableEvents.duration;
         end
-        
+
         if ~ismember({'duration'}, tableEvents.Properties.VariableNames)
             tableEvents.duration = tableEvents.stop - tableEvents.start;
         end
-        
+
         if ~ismember({'channel'}, tableEvents.Properties.VariableNames)
             tableEvents.channel = repmat('all',size(tableEvents,1),1);
         end
-        
+
         switch cfg.eventsoffset
             case 'scoringonset'
                 tableEvents.start = tableEvents.start + scoring.dataoffset;
-            tableEvents.stop = tableEvents.stop + scoring.dataoffset;
+                tableEvents.stop = tableEvents.stop + scoring.dataoffset;
+        end
+        if isfield(scoring, 'events')
+            scoring.events = unique(cat(1,scoring.events,tableEvents));
+        else
+            scoring.events = tableEvents;
+        end
+
     end
-    if isfield(scoring, 'events')
-        scoring.events = unique(cat(1,scoring.events,tableEvents));
-    else
-        scoring.events = tableEvents;
-    end
-    
-end
 end
 
-       
+
 
 if isfield(cfg,'to')
     cfg_sc = [];
@@ -1209,17 +1217,17 @@ end
 %%% exclude arousals (with respect to data start time = 0, if present
 %%% exclude those epochs for further analysis
 if istrue(cfg.excludebyarousals)
-if isfield(scoring,'arousals')
-    [scoring] = st_exclude_events_scoring(cfg, scoring, scoring.arousals.start, scoring.arousals.stop);
-end
+    if isfield(scoring,'arousals')
+        [scoring] = st_exclude_events_scoring(cfg, scoring, scoring.arousals.start, scoring.arousals.stop);
+    end
 end
 
 %%% exclude artifacts (with respect to data start time = 0, if present
 %%% exclude those epochs for further analysis
 if istrue(cfg.excludebyartifacts)
-if isfield(scoring,'artifacts')
-    [scoring] = st_exclude_events_scoring(cfg, scoring, scoring.artifacts.start, scoring.artifacts.stop);
-end
+    if isfield(scoring,'artifacts')
+        [scoring] = st_exclude_events_scoring(cfg, scoring, scoring.artifacts.start, scoring.artifacts.stop);
+    end
 end
 
 end
@@ -1234,7 +1242,7 @@ diffsec = datenum(dt-offsetdt)*24*3600;
 end
 
 function nodevalues = getValuesByExpression(doc,expression)
-        import javax.xml.xpath.*
+import javax.xml.xpath.*
 
 nodeList = expression.evaluate(doc,XPathConstants.NODESET);
 nodevalues = {};

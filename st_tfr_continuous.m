@@ -11,7 +11,7 @@ function freq = st_tfr_continuous(cfg, data)
 % cfg.approach = the approach to calculate either 'mtmconvol_memeff', 'mtmfft_segments', 'spectrogram' (default = 'spectrogram');
 % cfg.length   = timewindow/segment length in seconds (default = 30);
 % cfg.overlap  = the amount of overlap for each segment (default = 0.85);
-% cfg.taper    = choose the tapper either 'hanning', 'hanning_proportion'
+% cfg.taper    = choose the taper either 'hanning', 'hanning_proportion'
 %                or 'dpss' (see ft_freqanalysis for details)
 % cfg.windowproportion = if cfg.taper = 'hanning_proportion' then the window proportion can be set to here (default = 0.2 i.e. 10% left and right of each segment is 'hanninged' leaving the ceter 80% not tapered or attenuated);
 % cfg.foi      = the frequencies of interrest with their granularity (default = 0.5:0.5:30);
@@ -209,7 +209,7 @@ switch cfg.approach
         
         data_freq_segmented = [];
     case 'spectrogram'
-        ft_progress('init', cfg.feedback, 'calculating spectrograms channel and tapper wise');
+        ft_progress('init', cfg.feedback, 'calculating spectrograms channel- and taper-wise');
 
         windowsegment = data.fsample*cfg.length;
         switch cfg.taper
