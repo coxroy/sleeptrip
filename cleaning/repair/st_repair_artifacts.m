@@ -132,20 +132,33 @@ for segment_i=repairSegment_inds
 
             data.trial{1}(:,segment_start_sample:segment_end_sample)=segment_dat_interp;
 
+            %smooth across interpolation boundaries
             if istrue(cfg_artifacts.smoothafterinterpolation) && segment_i>1 %smoothing "backwards", so segment needs to be >1
 
                 %find channels interpolated in previous or current segment
                 badInds_prev=find(repair_grid(:,segment_i-1)==1);
                 badInds_all=union(badInds_prev,badInds);
 
+                smooth_start_sample=segment_start_sample-wnd_data_smooth_sample;
+                smooth_end_sample=segment_start_sample+wnd_data_smooth_sample;
+
+                %check we're inside the data range
+                if smooth_start_sample<data.sampleinfo(1)
+                    smooth_start_sample=data.sampleinfo(1);
+                end
+
+                if smooth_end_sample>data.sampleinfo(2)
+                    smooth_end_sample=data.sampleinfo(2);
+                end
+
                 %extract data
-                segment2_dat=data.trial{1}(badInds_all,segment_start_sample-wnd_data_smooth_sample:segment_start_sample+wnd_data_smooth_sample);
+                segment2_dat=data.trial{1}(badInds_all,smooth_start_sample:smooth_end_sample);
 
                 %smooth
                 segment2_dat_smth=smoothdata(segment2_dat,2,cfg_artifacts.smoothmethod,wnd_smooth_sample);
 
                 %assign back to data
-                data.trial{1}(badInds_all,segment_start_sample-wnd_data_smooth_sample:segment_start_sample+wnd_data_smooth_sample)=segment2_dat_smth;
+                data.trial{1}(badInds_all,smooth_start_sample:smooth_end_sample)=segment2_dat_smth;
 
 
             end
