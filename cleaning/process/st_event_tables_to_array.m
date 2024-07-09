@@ -9,8 +9,10 @@ function cfg_artifacts=st_event_tables_to_array(cfg_artifacts)
 %     cfg.continuous      = structure containing continuous artifact event tables
 %
 % Optional configuration parameters (subfield grid):
-%     cfg.merge_detectors = cell array of strings, with names of each detector to include for compuation of artifact grid. (default: 'all' [string])
 %     cfg.segment_length = length of grid segments in seconds (default: 5)
+%     cfg.minimum_segment_coverage = proportion of segment that needs to be covered by event in order to label grid element as artifact (default: 0 ->
+%     always label, even if single sample)
+%     cfg.merge_detectors = cell array of strings, with names of each detector to include for compuation of artifact grid. (default: 'all' [string])
 %
 % Output:
 %     cfg = artifact configuration with added artifact grids:
@@ -68,6 +70,7 @@ end
 
 %---set defaults--
 cfg_artifacts.segment_length  = ft_getopt(cfg_artifacts, 'segment_length', 5);%5 s window
+cfg_artifacts.minimum_segment_coverage = ft_getopt(cfg_artifacts, 'minimum_segment_coverage', 0);
 cfg_artifacts.merge_detectors=ft_getopt(cfg_artifacts,'merge_detectors','all');
 
 
@@ -75,10 +78,10 @@ cfg_grid.segment_length=cfg_artifacts.segment_length; %copy over to grid
 
 %extract event tables of requested artifact types
 detectorLabelsAvailable=fieldnames(cfg_artifacts.artifacts.raw_events)';
-if strcmp(cfg_artifacts.merge_detectors,'all') 
+if strcmp(cfg_artifacts.merge_detectors,'all')
     %select artifacts from all detectors
     includeDetectorLabels=detectorLabelsAvailable;
-else 
+else
     %include only artifacts from requested detectors
     includeDetectorLabels=intersect(detectorLabelsAvailable,cfg_artifacts.merge_detectors);
 end
@@ -101,7 +104,7 @@ numChan=length(chanLabels);
 
 cfg_grid.channel_number=numChan;
 
-%ignore designated segments 
+%ignore designated segments
 cfg_artifacts.segment_ignore=ft_getopt(cfg_artifacts, 'segment_ignore', false(1,numSeg));
 
 
@@ -123,17 +126,39 @@ for artType_i=1:numArtifactTypes
         segStart=floor(evStart/segment_length)+1;
         segEnd=floor(evEnd/segment_length)+1;
 
+        %segments covered by event
         seg_inds=segStart:segEnd;
+
+        if numel(seg_inds)>1 %separate start and end segments
+            startSeg_covered=1-(rem(evStart,segment_length)/segment_length);
+            endSeg_covered=rem(evEnd,segment_length)/segment_length;
+
+            if startSeg_covered<cfg_artifacts.minimum_segment_coverage
+                seg_inds(1)=[];
+            end
+
+            if endSeg_covered<cfg_artifacts.minimum_segment_coverage
+                seg_inds(end)=[];
+            end
+
+        else %single segment
+            seg_covered=(evEnd-evStart)/segment_length;
+
+            if seg_covered<cfg_artifacts.minimum_segment_coverage
+                seg_inds=[];
+            end
+
+        end
 
         artifact_grid_by_type(artType_i,chan_ind,seg_inds)= true;
     end
 
-  
+
 
 end
 
-  %mask with segments to ignore
-    artifact_grid_by_type=artifact_grid_by_type & ~permute(repmat(cfg_artifacts.segment_ignore,[numArtifactTypes,1,numChan]),[1 3 2]);
+%mask with segments to ignore
+artifact_grid_by_type=artifact_grid_by_type & ~permute(repmat(cfg_artifacts.segment_ignore,[numArtifactTypes,1,numChan]),[1 3 2]);
 
 %merge all remaining event types
 artifact_grid_merged=squeeze(any(artifact_grid_by_type,1));

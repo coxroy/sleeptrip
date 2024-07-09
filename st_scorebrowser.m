@@ -36,11 +36,54 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                      (default = 'no')
 %
 % The following configuration options are supported:
-%   cfg.signallinewidth         = the line width of the signals to draw (default = 0.5);
-%   cfg.precision               = the precision that the data is stored in, either 'single' or 'single_trial' (32bit float) or 'double' or 'double_trial' (64bit float) or 'original' (unchanged).
-%                                 Note that 'single_trial' and 'double_trial' only convert the data.trial to the desired precision (default = 'single_trial')
+%   ---general---
+%   cfg.epochlength             = duration in seconds for scoring and cutting the data up (default = 30)
+%   cfg.startepoch              = number of epoch to start view in.
+%   cfg.trl                     = structure that defines the data segments of interest, only applicable for trial-based data
+%   cfg.continuous              = 'yes' or 'no' whether the data should be interpreted as continuous or trial-based
 %   cfg.highlightscoringchannels = either 'yes' or 'no' if the scoring channels
 %                                 should be highlighted (default = 'yes')
+%   cfg.precision               = the precision that the data is stored in, either 'single' or 'single_trial' (32bit float) or 'double' or 'double_trial' (64bit float) or 'original' (unchanged).
+%                                 Note that 'single_trial' and 'double_trial' only convert the data.trial to the desired precision (default = 'single_trial')
+%
+%   ---channel presence---
+%   cfg.channel                 = cell-array with channel labels of channels to be plotted, see FT_CHANNELSELECTION (default: all channels present in data)
+%   cfg.channeldisplayed        = cell-array with channel labels to be
+%                                 selected for displaying (while still retaining the other channels available)
+%   cfg.mychan                  = Nx1 cell-array with selection of channels (use in conjunction with cfg.mychanscale)
+%
+%   ---channel labels---
+%   cfg.plotlabels              = 'yes' (default), 'no', 'some'; whether
+%                                 to plot channel labels in vertical viewmode ('some' plots one in every ten
+%                                 labels; useful when plotting a large number of channels at a time). 'yes/some' ignored when plotting more channels than allowed by 'channelmaxlabels'
+%   cfg.channelmaxlabels        = maximal number of channel labels to display (default = 64)
+%   cfg.chanlabelfontsize       = normalized fontsize of channel labels (default = 'automatic': range 0.004-0.04 depending on channel count)
+%
+%   ---channel limits and scaling---
+%   set y limits/scales globally or per channel:
+%   cfg.ylim                    = y range applied to ALL channels, can be 'maxmin', 'maxabs' or [ymin ymax] (default = 'maxabs')
+%   cfg.chanyrange              = Nx2 vector with y ranges for plotting for each channel, one 1x2 line per channel specified in cfg.channel
+%   cfg.chanscale               = Nx1 vector with scaling factors to apply to the channels prior to display, one per channel specified in cfg.channel
+%   set scales for different channel types:
+%   cfg.mychanscale             = number, scaling to apply to the channels specified in cfg.mychan
+%   cfg.eegscale                = number, scaling to apply to the EEG channels prior to display
+%   cfg.eogscale                = number, scaling to apply to the EOG channels prior to display
+%   cfg.ecgscale                = number, scaling to apply to the ECG channels prior to display
+%   cfg.emgscale                = number, scaling to apply to the EMG channels prior to display
+%   cfg.megscale                = number, scaling to apply to the MEG channels prior to display
+%   cfg.gradscale               = number, scaling to apply to the MEG gradiometer channels prior to display (in addition to the cfg.megscale factor)
+%   cfg.magscale                = number, scaling to apply to the MEG magnetometer channels prior to display (in addition to the cfg.megscale factor)
+%
+%   ---components---
+%   cfg.compscale               = string, 'global' or 'local', defines whether the colormap for the topographic scaling is
+%                                  applied per topography or on all visualized components (default 'global')
+%   cfg.zlim                    = color scaling to apply to component topographies, 'minmax', 'maxabs' (default = 'maxmin')
+%
+%   ---channel appearance---
+%   cfg.signallinewidth         = the line width of the signals to draw (default = 0.5);
+%   cfg.colorgroups             = 'sequential' 'allblack' 'jet' 'hsv' 'labelcharx' (x = xth character in label), 'chantype' or
+%                                  vector with length(data/hdr.label) defining groups (default = 'sequential')
+%   cfg.channelcolormap         = COLORMAP (default = customized lines map with 15 colors)
 %
 %   ---events---
 %   cfg.events                  = a table of events with the columns named: event start stop duration channel
@@ -77,22 +120,7 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                                 this will be changed to
 %                                 cfg.eventminduration for plotting
 %                                 (default = 0.05)
-%   cfg.startepoch              = number of epoch to start view in.
-%   cfg.ylim                    = vertical scaling, can be 'maxmin', 'maxabs' or [ymin ymax] (default = 'maxabs')
-%   cfg.epochlength             = duration in seconds for scoring and cutting the data up (default = 30)
-%   cfg.trl                     = structure that defines the data segments of interest, only applicable for trial-based data
-%   cfg.continuous              = 'yes' or 'no' whether the data should be interpreted as continuous or trial-based
-%   cfg.zlim                    = color scaling to apply to component topographies, 'minmax', 'maxabs' (default = 'maxmin')
 %
-%   ---channels---
-%   cfg.channel                 = cell-array with channel labels to use for the data, see FT_CHANNELSELECTION
-%   cfg.channeldisplayed        = cell-array with channel labels to be
-%                                 selected for displaying (while still retaining the other channels available)
-%   cfg.plotlabels              = 'yes' (default), 'no', 'some'; whether
-%                                 to plot channel labels in vertical viewmode ('some' plots one in every ten
-%                                 labels; useful when plotting a large number of channels at a time). 'yes/some' ignored when plotting more channels than allowed by 'channelmaxlabels'
-%   cfg.channelmaxlabels        = maximal number of channel labels to display (default = 64)
-%   cfg.chanlabelfontsize       = normalized fontsize of channel labels (default = 'automatic': range 0.004-0.04 depending on channel count)
 %   cfg.ploteventlabels         = 'type=value', 'colorvalue' (default = 'type=value');
 %   cfg.viewmode                = string, 'vertical', currently 'butterfly' or 'component' for visualizing components e.g. from an ICA are not supported (default is 'vertical')
 %   cfg.artfctdef.xxx.artifact  = Nx2 matrix with artifact segments see FT_ARTIFACT_xxx functions
@@ -107,24 +135,20 @@ function [cfg] = st_scorebrowser(cfg, data)
 %   ---colors---
 %   cfg.bgcolor                 = background color, either 'white' or 'dark' (default = 'white')
 %   cfg.color_text_on_bg        = color of text elements (channel label, sleep stage, epoch number) as RGB triplet (default:[0.75 0 0])
-%   cfg.colorgroups             = 'sequential' 'allblack' 'jet' 'hsv' 'labelcharx' (x = xth character in label), 'chantype' or
-%                                  vector with length(data/hdr.label) defining groups (default = 'sequential')
-%   cfg.channelcolormap         = COLORMAP (default = customized lines map with 15 colors)
 %
-%   ---scaling---
-%   cfg.eegscale                = number, scaling to apply to the EEG channels prior to display
-%   cfg.eogscale                = number, scaling to apply to the EOG channels prior to display
-%   cfg.ecgscale                = number, scaling to apply to the ECG channels prior to display
-%   cfg.emgscale                = number, scaling to apply to the EMG channels prior to display
-%   cfg.megscale                = number, scaling to apply to the MEG channels prior to display
-%   cfg.gradscale               = number, scaling to apply to the MEG gradiometer channels prior to display (in addition to the cfg.megscale factor)
-%   cfg.magscale                = number, scaling to apply to the MEG magnetometer channels prior to display (in addition to the cfg.megscale factor)
-%   cfg.mychanscale             = number, scaling to apply to the channels specified in cfg.mychan
-%   cfg.mychan                  = Nx1 cell-array with selection of channels
-%   cfg.chanscale               = Nx1 vector with scaling factors, one per channel specified in cfg.channel
-%   cfg.chanyrange              = Nx2 vector with y ranges for plotting for each channel, one 1x2 line per channel specified in cfg.channel
-%   cfg.compscale               = string, 'global' or 'local', defines whether the colormap for the topographic scaling is
-%                                  applied per topography or on all visualized components (default 'global')
+%   ---grid lines---
+%   cfg.drawgrid                = whether or not to draw x axis grid lines (default: 'yes');
+%   cfg.drawgrid_seconds        = intervals (in seconds) where to draw micro/minor/major grids (default: [0.5 1 3]);
+%   cfg.drawgrid_colors         = colors of micro/mino/major gridlines (default: {[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]} );
+%   cfg.drawgrid_LineStyle      = linestyles of micro/monir/major gridlines (default: {':' '-' '-'} )
+%   cfg.drawgriddynamic         = whether to adjust grid line intervals based on epoch/blocksize (default: 'no' -> respect cfg.drawgrid_seconds; 'yes' -> ignore cfg.drawgrid_seconds)
+%
+%   ---power and time-frequency plots---
+%   cfg.display_power_spectrum  = whether to display a power spectrum (default: 'no')
+%   cfg.display_time_frequency  = whether to display a time-frequency plot with signal overlay (default: 'no')
+%   cfg.display_frequency_chan  = label of channel for power spectrum/time-frequency (default: [] -> first channel)
+%   cfg.display_tf_signal_lim   = amplitude (y) limits of the signal overlaid on time-frequency plot (default: [-150 150])
+%   cfg.display_tf_tf_pow_lim   = power limits of the power spectrum (y) or time-frequency plot (z) (default: [-2 2])
 %
 % In case of component viewmode, a layout is required. If no layout is
 % give, an attempt is made to construct one from the sensor definition.
@@ -275,7 +299,6 @@ cfg.chanlabelfontsize=ft_getopt(cfg,'chanlabelfontsize','automatic'); %default: 
 
 %grid lines
 cfg.drawgriddynamic = ft_getopt(cfg,'drawgriddynamic','no');
-
 cfg.drawgrid = ft_getopt(cfg,'drawgrid','yes');
 cfg.drawgrid_seconds = ft_getopt(cfg,'drawgrid_seconds',[0.5 1 3]);
 cfg.drawgrid_colors = ft_getopt(cfg,'drawgrid_colors',{[0.9 0.9 0.9] [0.9 0.9 0.9] [0.5 0 0]});
@@ -3263,6 +3286,7 @@ switch key
                     arttrl = nearest(opt.trlvis(:,1),artsam)-1;
                 end
                 opt.trlop = arttrl;
+                opt.curr_epoch = arttrl;
                 setappdata(h, 'opt', opt);
                 setappdata(h, 'cfg', cfg);
                 redraw_cb(h, eventdata);
@@ -4737,7 +4761,7 @@ if strcmp(cfg.doSleepScoring,'yes')
         end
 
 
-
+        %set up vertical line marking current epoch
         set(axh, 'yTick', flip(yTick));
         set(axh, 'yTickLabel', flip(yTickLabel));
         set(axh,'TickDir','out');
@@ -5367,13 +5391,13 @@ if strcmp(cfg.doSleepScoring,'yes')
 
 
                 minFreq = 0.5;
-                maxFreq = 30;
+                maxFreq = 40;
                 FreqSteps = 0.25;
                 TimeSteps = 0.1;
                 Xtick = fix(minFreq):2:fix(maxFreq);
 
-                 Ysteps=(max(cfg.display_tf_tf_pow_lim)-min(cfg.display_tf_tf_pow_lim))/2;
-                  Ytick=min(cfg.display_tf_tf_pow_lim):Ysteps:max(cfg.display_tf_tf_pow_lim);
+                Ysteps=(max(cfg.display_tf_tf_pow_lim)-min(cfg.display_tf_tf_pow_lim))/2;
+                Ytick=min(cfg.display_tf_tf_pow_lim):Ysteps:max(cfg.display_tf_tf_pow_lim);
 
 
                 cfg_tfr = [];
@@ -5395,6 +5419,47 @@ if strcmp(cfg.doSleepScoring,'yes')
 
                 fttimwin=[3 2];
                 cfg_tfr.t_ftimwin =linspace(fttimwin(1),fttimwin(2),length(cfg_tfr.foi));
+
+
+                cfg_tfr=[];
+                cfg_tfr.pad = 'nextpow2';
+                cfg_tfr.output   = 'pow';
+                cfg_tfr.method='mtmconvol';
+                cfg_tfr.taper='dpss'; %hanning
+                cfg_tfr.toi='all';
+                cfg_tfr.toi = min(cellfun(@min,data_det_signal_eeg_data_tfr.time)):0.1:max(cellfun(@max,data_det_signal_eeg_data_tfr.time));
+                cfg_tfr.foi = 0.5:0.25:35;
+                tapsmofrq=linspace(4,2,length(cfg_tfr.foi));
+                tapsmofrq=linspace(2,1,length(cfg_tfr.foi));
+                tapsmofrq = 2;
+                tapsmofrq=linspace(1,4,length(cfg_tfr.foi));
+                cfg_tfr.tapsmofrq = tapsmofrq;
+
+                t_ftimwin =linspace(3,2,length(cfg_tfr.foi));
+                t_ftimwin =linspace(2,2,length(cfg_tfr.foi));
+                t_ftimwin =linspace(2,2,length(cfg_tfr.foi));
+                t_ftimwin =linspace(2,0.5,length(cfg_tfr.foi));
+                %t_ftimwin =linspace(1,1,length(cfg_tfr.foi));
+                % t_ftimwin =linspace(2,2,length(cfg_tfr.foi));
+                cfg_tfr.t_ftimwin = t_ftimwin;
+
+                %approximating Purcell
+                cfg_tfr=[];
+                cfg_tfr.pad = 'nextpow2';
+                cfg_tfr.output   = 'pow';
+                cfg_tfr.method='mtmconvol';
+                cfg_tfr.taper='dpss'; %hanning
+                cfg_tfr.toi = min(cellfun(@min,data_det_signal_eeg_data_tfr.time)):0.1:max(cellfun(@max,data_det_signal_eeg_data_tfr.time));
+                cfg_tfr.foi = minFreq:FreqSteps:maxFreq;
+
+
+
+                tapsmofrq = 1;%default: 2
+                cfg_tfr.tapsmofrq = tapsmofrq;
+
+                %t_ftimwin =linspace(2,2,length(cfg_tfr.foi));
+                t_ftimwin =linspace(2,2,length(cfg_tfr.foi));
+                cfg_tfr.t_ftimwin = t_ftimwin;
 
                 %get spectrogram
                 data_tfr = ft_freqanalysis(cfg_tfr,data_det_signal_eeg_data_tfr);
@@ -5449,7 +5514,7 @@ if strcmp(cfg.doSleepScoring,'yes')
                     chname = data_tfr.label{1};
                     cfg.f_ps_gca = gca;
                     title(cfg.f_ps_gca,[chname],'interpreter','none');
-                    set(cfg.f_ps_gca, 'TickDir', 'out','Xtick', Xtick,'Ytick',Ytick,'YLim',[min(Ytick) max(Ytick)]);
+                    set(cfg.f_ps_gca, 'TickDir', 'out','Xtick', Xtick,'Ytick',Ytick,'XLim',[min(Xtick) max(Xtick)], 'YLim',[min(Ytick) max(Ytick)]);
                     set(cfg.f_ps, 'Name', 'Power Spectrum');
 
                     set(cfg.f_ps,'color','w')
@@ -5570,9 +5635,11 @@ if strcmp(cfg.doSleepScoring,'yes')
                     %                         s1 = copyobj(p1gca,tt)
                     %                         s2 = copyobj(p2gca,tt)
                     %                         close(tfr_fig)
+                    set(p1gca,'xlim',cfg_tfr.x2range,'ylim',cfg_tfr.ylim)
+                    %set(p1gca,'yscale','log')
+
+                    %colorbar
                     set(p1gccb,'location','eastoutside')
-                    set(p1gca,'xlim',cfg_tfr.x2range)
-                    set(p1gca,'ylim',cfg_tfr.ylim)
 
 
                     %align with signal axis of scorebrowser
@@ -6088,7 +6155,7 @@ for j = ordervec
 
     for k=1:numel(artbeg)
 
-        h_artifact = ft_plot_box([tim(artbeg(k)) tim(artend(k)) -1 1], 'facecolor', opt.artcolors(j,:), 'edgecolor', 'none', 'tag', 'artifact',  ...
+        h_artifact = ft_plot_box([tim(artbeg(k)) tim(artend(k)) -1 1], 'facecolor', opt.artcolors(j,:), 'edgecolor', 'none', 'tag', 'artifact', 'facealpha',0.5, ...
             'hpos', opt.hpos, 'vpos', opt.vpos, 'width', opt.width, 'height', opt.height, 'hlim', opt.hlim, 'vlim', [-1 1]);
 
 
