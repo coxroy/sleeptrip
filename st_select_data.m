@@ -95,7 +95,7 @@ if isfield(cfg,'scoring')
         if ischar(cfg.stages)
             cfg.stages = {cfg.stages};
         else
-            ft_error('the stages of interest must be defines as a string or a cellstr.');
+            ft_error('the stages of interest must be defined as a string or a cellstr.');
         end
     end
 end

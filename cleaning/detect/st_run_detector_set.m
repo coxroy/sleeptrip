@@ -73,11 +73,14 @@ ft_checkconfig(cfg_detector_set,'required',{'number','label','detectors','elec',
 
 fprintf([functionname ' function initialized\n'])
 
+%extract scoring and sample rate
 scoring=cfg_detector_set.scoring;
 srate=data.fsample;
 
-%for every detector
-%detector_runtime=[];
+%ensure column orientation
+data.label=data.label(:);
+
+%--------loop across detectors--------
 artifacts=struct;
 for detector_i=1:cfg_detector_set.number
 
@@ -100,7 +103,6 @@ for detector_i=1:cfg_detector_set.number
     ft_checkconfig(cfg_st,'required',{'method'});
 
     %set required field defaults if not provided...
-
     cfg_st.minduration=ft_getopt(cfg_st,'minduration',0);
     cfg_st.maxduration=ft_getopt(cfg_st,'maxduration',inf);
     cfg_st.paddingduration=ft_getopt(cfg_st,'paddingduration',0);
@@ -127,7 +129,6 @@ for detector_i=1:cfg_detector_set.number
         data_selected=st_select_data(cfg_select,data);
     else %retain all data
         data_selected=data;
-
     end
 
     %get final channel/sample count
@@ -194,7 +195,7 @@ for detector_i=1:cfg_detector_set.number
     elseif strcmp(cfg_st.method,'neighbours') %correlation with neighbors, below/above R and above proportion of channels
 
         %verify existence of required fields
-        ft_checkconfig(cfg_st,'required',{'elec','neighbours','metric','thresholddirection','thresholdvalue'});
+        ft_checkconfig(cfg_st,'required',{'elec','neighbours','metric','thresholddirection','thresholdvalue','channelthreshold'});
 
         %segment length, get default  and process
         cfg_st.segmentlength=ft_getopt(cfg_st,'segmentlength',30); %default 30 s segmentlength
@@ -233,7 +234,7 @@ for detector_i=1:cfg_detector_set.number
                 chanChanMetric=corr(dat_seg');
                 chanChanMetric(~connectivity)=nan;
 
-            elseif strcmp(cfg_st.metric,'correlation_minamp')
+            elseif strcmp(cfg_st.metric,'correlation_minamp') %review: zmax only
                 %channel correlation
                 chanChanMetric=corr(dat_seg');
                 chanChanMetric(~connectivity)=nan;
