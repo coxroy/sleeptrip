@@ -71,11 +71,12 @@ st_defaults
 
 %---input checks and defaults----
 %ft_checkconfig(cfg,'required',{'scoring'});
-cfg.makecontinuous = ft_getopt(cfg, 'makecontinuous', 'no');
-cfg.resettime= ft_getopt(cfg,'resettime','yes');
-cfg.usescoringexclusion = ft_getopt(cfg, 'usescoringexclusion', 'yes');
 cfg.minlength = ft_getopt(cfg, 'minlength',30); %default 30s (typical epoch length)
 
+cfg.usescoringexclusion = ft_getopt(cfg, 'usescoringexclusion', 'yes');
+
+cfg.makecontinuous = ft_getopt(cfg, 'makecontinuous', 'no');
+cfg.resettime= ft_getopt(cfg,'resettime','yes');
 
 %first call ft_selectdata to allow selection of channels
 data=ft_selectdata(cfg,data);

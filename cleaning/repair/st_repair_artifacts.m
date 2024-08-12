@@ -87,7 +87,7 @@ cfg_artifacts.smoothwindow=ft_getopt(cfg_artifacts,'smoothwindow',0.1);
 wnd_smooth_sample=round((cfg_artifacts.smoothwindow)*data.fsample); %convert to samples
 %----end defaults---
 
-
+%note: consider checking consistency of data and repair_grid 
 [numChan,numSegments]=size(repair_grid);
 
 elec=cfg_artifacts.elec;

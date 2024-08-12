@@ -13,20 +13,20 @@ function cfg_artifacts=st_process_detector_results(cfg_artifacts)
 %     cfg=st_process_detector_results(cfg)
 %
 % Required configuration parameters (all automatically supplied by ST_RUN_DETECTOR_SET):
-%     cfg.continuous      = structure containing continuous artifact event tables
+%     cfg.artifacts.raw_events      = structure containing continuous artifact event tables
 %     cfg.detector_set  = cfg containing details of individual detectors
 %     cfg.data = data structure
 %     cfg.elec = elec structure
 %
 % Optional configuration parameters:
-%     [main]
-%     cfg.neighbours = neighbourhood structure to be used by ST_EXPAND_ARTIFACTS_TO_NEIGHBOURS (default taken from ST_GET_DEFAULT_NEIGHBOURS)
-%     cfg.keepeventtables = string (default: 'yes')
-%     cfg.merge_detectors = cell array of strings, with names of detectors to include for computation of basic artifact grid. (default: 'all')
 %     cfg.segment_length = length of grid segments in seconds (default: 5)
 %     cfg.channelexpandthresh = minimum proportion of artifactual neighbors required to expand artifacts (default: Inf, see ST_EXPAND_ARTIFACTS_TO_NEIGHBOURS)
 %     cfg.segmentrejectthresh = minimum proportion of channels required to label segment as rejected (default: Inf, see ST_ARTIFACT_REJECT_GRID)
 %     cfg.badchannelthresh = minimum proportion of unrejected segments required to label all segments of a channel as artifact (default: Inf, see ST_EXPAND_ARTIFACTS_TO_SEGMENTS)
+%     cfg.merge_detectors = cell array of strings, with names of detectors to include for computation of basic artifact grid. (default: 'all')
+%     cfg.neighbours = neighbourhood structure to be used by ST_EXPAND_ARTIFACTS_TO_NEIGHBOURS (default taken from ST_GET_DEFAULT_NEIGHBOURS)
+%     cfg.keepeventtables = string (default: 'yes')
+
 %
 % Output:
 %     cfg = configuration containing channelwise artifact information

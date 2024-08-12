@@ -143,7 +143,7 @@ function [cfg] = st_scorebrowser(cfg, data)
 %   cfg.drawgrid_LineStyle      = linestyles of micro/monir/major gridlines (default: {':' '-' '-'} )
 %   cfg.drawgriddynamic         = whether to adjust grid line intervals based on epoch/blocksize (default: 'no' -> respect cfg.drawgrid_seconds; 'yes' -> ignore cfg.drawgrid_seconds)
 %
-%   ---power and time-frequency plots---
+%   ---power and time-frequency plots (experimental)---
 %   cfg.display_power_spectrum  = whether to display a power spectrum (default: 'no')
 %   cfg.display_time_frequency  = whether to display a time-frequency plot with signal overlay (default: 'no')
 %   cfg.display_frequency_chan  = label of channel for power spectrum/time-frequency (default: [] -> first channel)

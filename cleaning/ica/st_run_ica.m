@@ -1,4 +1,4 @@
-function [comp,compLabelProbsTable]=st_run_ica(cfg,data)
+function [comp,comp_probs]=st_run_ica(cfg,data)
 
 %---input checks and defaults----
 ft_checkconfig(cfg,'required',{'elec','scoring'});
@@ -19,7 +19,7 @@ if istrue(cfg.preclean)
         cfg_tmp.include='default_ica';
         cfg_detector_set=st_get_default_detector_set(cfg_tmp);
 
-        %use stages_ica_train to limit artifact detection to desired stages
+        %limit artifact detection to desired stages
         for detector_i=1:cfg_detector_set.number
             cfg_detector_set.detectors{detector_i}.stages=cfg.stages_ica_train;
         end
@@ -52,6 +52,7 @@ if istrue(cfg.preclean)
     segment_expansion_grid=cfg_artifacts.artifacts.grid.artifact_grid_segment_expansion;
     ica_interpolation_grid=false(size(segment_expansion_grid));
 
+    %set to interpolate aross ENTIRE recording
     chansInterpolate=any(segment_expansion_grid,2);
     ica_interpolation_grid(chansInterpolate,:)=true;
     cfg_artifacts.artifacts.grid.ica_grid=ica_interpolation_grid;
@@ -124,22 +125,6 @@ unmixing = weights * sphere; %comp x chan
 mixing = pinv(unmixing); %chan x comp
 
 
-%----initialize EEGLAB struct---
-EEG=eeg_emptyset;
-EEG.srate=data_ica.fsample;
-EEG.data=dat; %concatenated data
-EEG.chanlocs=elec2chanlocs(cfg.elec); %custom func
-EEG.nbchan= length(data.label);
-EEG.trials=1;
-EEG.pnts=size(dat,2);
-
-%ICA (icaact not needed: eeg_checkset will remove)
-EEG.icachansind=1:length(data.label);
-EEG.icaweights=weights;
-EEG.icasphere=sphere;
-EEG.icawinv=mixing;
-
-EEG=eeg_checkset(EEG);
 
 %---Fieldtrip---
 
@@ -148,14 +133,32 @@ cfg_comp.demean    = 'no';           % This has to be explicitly stated, as the 
 cfg_comp.unmixing  = unmixing;  % Supply the matrix necessary to 'unmix' the channel-series data into components
 cfg_comp.topolabel = data.label(:); % Supply the original channel label information
 
-%calculate component time courses for entire data
-comp = ft_componentanalysis(cfg_comp, data);
+%---output---
 
+comp = ft_componentanalysis(cfg_comp, data); %calculate component time courses for entire data
+comp_probs=table;       %iitialize empty table
 
 %--IClabel----
 if istrue(cfg.iclabel)
 
-    %call IClabel
+    %----initialize EEGLAB struct---
+    EEG=eeg_emptyset;
+    EEG.srate=data_ica.fsample;
+    EEG.data=dat; %concatenated data
+    EEG.chanlocs=elec2chanlocs(cfg.elec); %custom func
+    EEG.nbchan= length(data.label);
+    EEG.trials=1;
+    EEG.pnts=size(dat,2);
+
+    %ICA (icaact not needed: eeg_checkset will remove)
+    EEG.icachansind=1:length(data.label);
+    EEG.icaweights=weights;
+    EEG.icasphere=sphere;
+    EEG.icawinv=mixing;
+
+    EEG=eeg_checkset(EEG);
+
+    %----IClabel------
     EEG=iclabel(EEG); %will rereference to average, recalculate component time courses
 
 
@@ -163,25 +166,14 @@ if istrue(cfg.iclabel)
     ic_classification=EEG.etc.ic_classification.ICLabel;
     [m,maxInd]=max(ic_classification.classifications,[],2);
     compLabelTable=table(ic_classification.classes(maxInd)',m,'VariableNames',{'classLabel','prob'});
-    compLabelProbsTable=array2table(ic_classification.classifications,'VariableNames',ic_classification.classes);
+    comp_probs=array2table(ic_classification.classifications,'VariableNames',ic_classification.classes);
 
-    %adjust component names
+    %adjust FieldTrip component names
     for k = 1:size(comp.topo,2)
         comp.label{k,1} = sprintf('%03d_%s_%.2f', k,compLabelTable{k,'classLabel'}{1}(1:3),compLabelTable{k,'prob'});
     end
 
 end
 
-%--remove  components
 
-%     cfg=[];
-%     cfg.component=badCompInds;
-%     data=ft_rejectcomponent(cfg, comp);
-%
-%     %simplify output comp structure (can be restored with ft_componentanalysis)
-%     comp=rmfield(comp,{'time','trial'});
-%
-%     badcomp=[];
-%     badcomp.inds=badCompInds;
-%     badcomp.probs=compLabelProbsTable;
 
