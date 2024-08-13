@@ -297,6 +297,7 @@ cfg.highlightscoringchannels = ft_getopt(cfg, 'highlightscoringchannels', 'no');
 cfg.channelmaxlabels = ft_getopt(cfg, 'channelmaxlabels', 64);
 cfg.chanlabelfontsize=ft_getopt(cfg,'chanlabelfontsize','automatic'); %default: automatic (handled later)
 
+cfg.title = ft_getopt(cfg,'title','data');
 %grid lines
 cfg.drawgriddynamic = ft_getopt(cfg,'drawgriddynamic','no');
 cfg.drawgrid = ft_getopt(cfg,'drawgrid','yes');
@@ -1660,7 +1661,7 @@ end
 if strcmp(cfg.bgcolor,'dark')
     opt.chancolors = 1-opt.chancolors;
 end
-set(h,'NumberTitle', 'off','MenuBar','none','Name','Scorebrowser');
+set(h,'NumberTitle', 'off','MenuBar','none','Name',strjoin({'Scorebrowser',cfg.title},' - '));
 axes('Parent',h,'Position',[0.03 0.09 0.94 0.90]);
 
 set(h,'color',[0 0 0]);
@@ -4798,7 +4799,9 @@ if strcmp(cfg.doSleepScoring,'yes')
 
 
 
-        set(cfg.hhyp, 'Name', sprintf('Hypnogram'));
+        %set(cfg.hhyp, 'Name', sprintf('Hypnogram'));
+  set(cfg.hhyp, 'Name', strjoin({'Hypnogram',cfg.title},' - '));
+        
         set(axh, 'box', 'off');
 
         hold(axh,'off');
