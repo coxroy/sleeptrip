@@ -110,15 +110,15 @@ cfg_artifacts.segment_ignore=ft_getopt(cfg_artifacts, 'segment_ignore', false(1,
 
 %initalize logical artifact matrix
 artifact_grid_by_type = false(numArtifactTypes,numChan,numSeg);
-
+segment_time_offset=(data.sampleinfo(1)-1)/data.fsample; %in case event tables were created from data not starting at t=0
 for artType_i=1:numArtifactTypes
     event_table=cfg_artifacts.artifacts.raw_events.(includeDetectorLabels{artType_i}).events;
     numEvents=size(event_table,1);
 
     for ev_i=1:numEvents
 
-        evStart=event_table{ev_i,{'start'}}; %in sec
-        evEnd=event_table{ev_i,{'stop'}};
+        evStart=event_table{ev_i,{'start'}}-segment_time_offset; %in sec since start of current data
+        evEnd=event_table{ev_i,{'stop'}}-segment_time_offset;
 
         evChan=event_table{ev_i,{'channel'}};
         chan_ind=find(strcmp(chanLabels,evChan));

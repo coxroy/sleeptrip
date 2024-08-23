@@ -13,6 +13,10 @@ chanLabels=cfg_artifacts.channel;
 
 sampleinfo=cfg_artifacts.data.sampleinfo;
 srate=cfg_artifacts.data.fsample;
+numSamples=length(cfg_artifacts.data.time{1});
+segment_time_offset=(sampleinfo(1)-1)/srate; %in case event tables need to match data not starting at t=0
+
+
 segmentLengthSample=round(segmentLength*srate);
 
 grid_names=fieldnames(cfg_grid)';
@@ -61,11 +65,11 @@ for grid_var_i=1:length(grid_names)
 
     %adjust events outside data range
     eventTable{eventTable{:,'start'}<1,'start'}=1;
-    eventTable{eventTable{:,'stop'}>sampleinfo(2),'stop'}=sampleinfo(2);
+    eventTable{eventTable{:,'stop'}>numSamples,'stop'}=numSamples;
 
     %convert to time in s
-    eventTable.start=(eventTable.start-1)./srate;
-    eventTable.stop=(eventTable.stop-1)./srate;
+    eventTable.start=(eventTable.start-1)./srate +segment_time_offset; %add data offset if needed
+    eventTable.stop=(eventTable.stop-1)./srate +segment_time_offset;
 
 
     %add duration

@@ -3,15 +3,17 @@ function fh=st_spectroplot(cfg,data)
 
 cfg.channel      = ft_getopt(cfg, 'channel', data.label); %all channels by default
 cfg.title        = ft_getopt(cfg, 'title', []);
+%cfg.timescale =ft_getopt(cfg,'tick','hour');
+%cfg.length = 
 %%
 %calculate spectrogram
-cfg_pow = [];
-cfg_pow.approach = 'spectrogram'; % 'spectrogram' 'mtmfft_segments' 'mtmconvol_memeff'
-cfg_pow.taper  = 'dpss'; % 'hanning' 'hanning_proportion' 'dpss'
-cfg_pow.transform  = 'log10'; % 'none' 'db' 'db(p+1)' 'log10' 'log10(p+1)'
-cfg_pow.channel = cfg.channel;
-cfg_pow.powvalue = 'power';
-freq_continous = st_tfr_continuous(cfg_pow, data);
+%cfg_pow = [];
+cfg.approach = 'spectrogram'; % 'spectrogram' 'mtmfft_segments' 'mtmconvol_memeff'
+cfg.taper  = 'dpss'; % 'hanning' 'hanning_proportion' 'dpss'
+cfg.transform  = 'log10'; % 'none' 'db' 'db(p+1)' 'log10' 'log10(p+1)'
+cfg.channel = cfg.channel;
+cfg.powvalue = 'power';
+freq_continous = st_tfr_continuous(cfg, data);
 
 %%
 
@@ -29,6 +31,7 @@ for k=1:numChan
 
     %--------------spectrogram----------
     plotRange=plotPosition:plotPosition+numPlotCols(1)-1;
+
     subplot(numChan,sum(numPlotCols),plotRange)
     time = freq_continous.time;
     freq = freq_continous.freq;
