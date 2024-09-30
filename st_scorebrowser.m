@@ -81,8 +81,8 @@ function [cfg] = st_scorebrowser(cfg, data)
 %
 %   ---channel appearance---
 %   cfg.signallinewidth         = the line width of the signals to draw (default = 0.5);
-%   cfg.colorgroups             = 'sequential' 'allblack' 'jet' 'hsv' 'labelcharx' (x = xth character in label), 'chantype' or
-%                                  vector with length(data/hdr.label) defining groups (default = 'sequential')
+%   cfg.colorgroups             = 'allblack' 'sequential' 'jet' 'hsv' 'labelcharx' (x = xth character in label), 'chantype' or
+%                                  vector with length(data/hdr.label) defining groups (default = 'allblack')
 %   cfg.channelcolormap         = COLORMAP (default = customized lines map with 15 colors)
 %
 %   ---events---
@@ -566,8 +566,12 @@ end
 cfg.selectmode = 'markartifact';
 if hasdata || istrue(cfg.datainteractive)
     cfg.channel = 1:length(data.label);
-    cfg.chanscale = ones(1,length(data.label));
+    if isempty(cfg.chanscale)  %unclear of intended use: was overriding user-provided arguments
+
+        cfg.chanscale = ones(1,length(data.label));
+    end
 end
+
 
 
 
@@ -2369,12 +2373,13 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%close scorebrowser and all associated figures
 function cleanup_cb(h, eventdata)
 selection = questdlg('Close Browser?',...
     'Close Request',...
     'Yes','No','No');
-switch selection,
-    case 'Yes',
+switch selection
+    case 'Yes'
 
         cfg = getappdata(h, 'cfg');
         if isfield(cfg,'hhyp')
@@ -2398,7 +2403,7 @@ switch selection,
         uiresume
         opt = [];
         cfg = [];
-        h = [];
+        delete(h);
     case 'No'
         return
 end
@@ -4510,6 +4515,10 @@ h = getparent(h);
 opt = getappdata(h, 'opt');
 cfg = getappdata(h, 'cfg');
 
+if ~isfield(cfg,'title')
+    cfg.title = ft_getopt(cfg,'title','data');
+end
+
 %fprintf('redrawing with viewmode %s\n', cfg.viewmode);
 
 begsample = opt.trlvis(opt.trlop, 1);
@@ -4800,8 +4809,8 @@ if strcmp(cfg.doSleepScoring,'yes')
 
 
         %set(cfg.hhyp, 'Name', sprintf('Hypnogram'));
-  set(cfg.hhyp, 'Name', strjoin({'Hypnogram',cfg.title},' - '));
-        
+        set(cfg.hhyp, 'Name', strjoin({'Hypnogram',cfg.title},' - '));
+
         set(axh, 'box', 'off');
 
         hold(axh,'off');
