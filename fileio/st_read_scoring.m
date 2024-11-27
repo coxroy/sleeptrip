@@ -62,9 +62,9 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                          which case a scoremap needs to be given (default = 'aasm')
 %   cfg.to               = string, if it is set it will convert to a known standard
 %                          see ST_SCORINGCONVERT for details
-%   cfg.scoringartifactssfile = string, path to the artifact file, by devault [cfg.scoringfile '.artifacts.tsv'] or if not present [cfg.scoringfile '.artifacts.csv] ;
-%   cfg.scoringarousalsfile   = string, path to the arousal file, by devault  [cfg.scoringfile '.arousals.tsv'] or if not present [cfg.scoringfile '.arousals.csv] ;
-%   cfg.scoringeventsfile     = string, path to the events file, by devault  [cfg.scoringfile '.events.tsv'] or if not present [cfg.scoringfile '.events.csv] ;
+%   cfg.scoringartifactssfile = string, path to the artifact file, by default [cfg.scoringfile '.artifacts.tsv'] or if not present [cfg.scoringfile '.artifacts.csv] ;
+%   cfg.scoringarousalsfile   = string, path to the arousal file, by default  [cfg.scoringfile '.arousals.tsv'] or if not present [cfg.scoringfile '.arousals.csv] ;
+%   cfg.scoringeventsfile     = string, path to the events file, by default  [cfg.scoringfile '.events.tsv'] or if not present [cfg.scoringfile '.events.csv] ;
 %   cfg.forceundefinedto = string,... and force the unsupported scoring labels to this string, see ST_SCORINGCONVERT for details
 %   cfg.epochlength      = scalar, epoch length in seconds, (default = 30)
 %   cfg.dataoffset       = scalar, offest from data in seconds,
@@ -268,44 +268,93 @@ if nargin<2
         ft_error('The scoring file "%s" file was not found, cannot read in scoring information. No scoring created.', filename);
     end
 
-    fileendings = {'.tsv','.csv'}; %RC: check if makes sense to add .txt
+    [score_path, score_file_root, score_ext]=fileparts(filename);
 
-    for iFileending = 1:numel(fileendings)
-        cfg.scoringarousalsfile = ft_getopt(cfg, 'scoringarousalsfile', [cfg.scoringfile '.arousals' fileendings{iFileending}] ); %RC: .arousals added after file extension (also for artifacts and events below)
-        filename_arousals = fetch_url(cfg.scoringarousalsfile);
-        filename_arousals_ending = fileendings{iFileending};
-        if ~exist(filename_arousals, 'file')
-            ft_warning(['No scoring arousal file "%s" file with ' fileendings{iFileending} ' ending was not present.'], filename_arousals);
-            filename_arousals = [];
-        else
-            break
-        end
+    %search order of extensions: current first, then remaining alphabetically
+    fileendings = {'.txt','.tsv','.csv'};
+    fileendings=[score_ext setdiff(fileendings,score_ext)];
 
-    end
-
-    for iFileending = 1:numel(fileendings)
-        cfg.scoringartifactfile = ft_getopt(cfg, 'scoringartifactfile', [cfg.scoringfile '.artifact' fileendings{iFileending}] );
-        filename_artifacts = fetch_url(cfg.scoringartifactfile);
-        filename_artifacts_ending = fileendings{iFileending};
-        if ~exist(filename_artifacts, 'file')
-            ft_warning(['No scoring arousal file "%s" file with ' fileendings{iFileending} ' ending was not present.'], filename_artifacts);
-            filename_artifacts = [];
-        else
-            break
+    cfg.scoringarousalsfile= ft_getopt(cfg,'scoringarousalsfile','');
+    if ~isfile(cfg.scoringarousalsfile)
+        ft_warning('No arousal file specified: searching for files matching scoring file')
+        for iFileending = 1:numel(fileendings)
+            arousals_file=[score_file_root '.arousals' fileendings{iFileending}];
+            scoringarousalsfile=fullfile(score_path,arousals_file);
+            if isfile(scoringarousalsfile)
+                cfg.scoringarousalsfile = fullfile(score_path,[score_file_root '.arousals' fileendings{iFileending}]); %RC: .arousals added after file extension (also for artifacts and events below)
+                %filename_arousals = fetch_url(cfg.scoringarousalsfile);
+                ft_info('Using %s as arousal file.',arousals_file)
+                break
+            end
         end
     end
 
-    for iFileending = 1:numel(fileendings)
-        cfg.scoringeventsfile = ft_getopt(cfg, 'scoringeventsfile', [cfg.scoringfile '.events' fileendings{iFileending}] );
-        filename_events = fetch_url(cfg.scoringeventsfile);
-        filename_events_ending = fileendings{iFileending};
-        if ~exist(filename_events, 'file')
-            ft_warning(['No scoring events file "%s" file with ' fileendings{iFileending} ' ending was not present.'], filename_events);
-            filename_events = [];
-        else
-            break
+    cfg.scoringartifactfile= ft_getopt(cfg,'scoringartifactfile','');
+    if ~isfile(cfg.scoringartifactfile)
+        ft_warning('No artifact file specified: searching for files matching scoring file')
+        for iFileending = 1:numel(fileendings)
+            artifacts_file=[score_file_root '.artifacts' fileendings{iFileending}];
+            scoringartifactfile=fullfile(score_path,artifacts_file);
+            if isfile(scoringartifactfile)
+                cfg.scoringartifactfile = fullfile(score_path,artifacts_file);
+                %filename_artifacts = fetch_url(cfg.scoringartifactfile);
+                ft_info('Using %s as artifact file.',artifacts_file)
+                break
+            end
         end
     end
+
+    cfg.scoringeventsfile = ft_getopt(cfg, 'scoringeventsfile','');
+    if ~isfile(cfg.scoringeventsfile)
+        ft_warning('No event file specified: searching for files matching scoring file')
+        for iFileending = 1:numel(fileendings)
+            events_file=[score_file_root '.events' fileendings{iFileending}];
+            scoringeventfile=fullfile(score_path,events_file);
+            if isfile(scoringeventfile)
+                cfg.scoringeventsfile = fullfile(score_path,scoringeventfile);
+                %filename_artifacts = fetch_url(cfg.scoringartifactfile);
+                ft_info('Using %s as artifact file.',artifacts_file)
+                break
+            end
+        end
+    end
+    %     %RC: improve to allow both user-supplied arousal/artifact files, or otherwise automatic scan for .arousal or .artifact.csv/tsv/txt
+    %     for iFileending = 1:numel(fileendings)
+    %         cfg.scoringarousalsfile = fullfile(score_path,[score_file_root '.arousals' fileendings{iFileending}]); %RC: .arousals added after file extension (also for artifacts and events below)
+    %         filename_arousals = fetch_url(cfg.scoringarousalsfile);
+    %         filename_arousals_ending = fileendings{iFileending};
+    %         if ~exist(filename_arousals, 'file')
+    %             ft_warning(['No scoring arousal file "%s" file with ' fileendings{iFileending} ' ending was not present.'], filename_arousals);
+    %             filename_arousals = [];
+    %         else
+    %             break
+    %         end
+    %
+    %     end
+
+    %         for iFileending = 1:numel(fileendings)
+    %             cfg.scoringartifactfile = fullfile(score_path,[score_file_root '.artifacts' fileendings{iFileending}]);
+    %             filename_artifacts = fetch_url(cfg.scoringartifactfile);
+    %             filename_artifacts_ending = fileendings{iFileending};
+    %             if ~exist(filename_artifacts, 'file')
+    %                 ft_warning(['No scoring artifact file "%s" file with ' fileendings{iFileending} ' ending was not present.'], filename_artifacts);
+    %                 filename_artifacts = [];
+    %             else
+    %                 break
+    %             end
+    %         end
+
+    %     for iFileending = 1:numel(fileendings)
+    %         cfg.scoringeventsfile = ft_getopt(cfg, 'scoringeventsfile', [cfg.scoringfile '.events' fileendings{iFileending}] );
+    %         filename_events = fetch_url(cfg.scoringeventsfile);
+    %         filename_events_ending = fileendings{iFileending};
+    %         if ~exist(filename_events, 'file')
+    %             ft_warning(['No scoring events file "%s" file with ' fileendings{iFileending} ' ending was not present.'], filename_events);
+    %             filename_events = [];
+    %         else
+    %             break
+    %         end
+    %     end
 else
     cfg.scoringfile = [];
     cfg.scoringarousalsfile = [];
@@ -331,6 +380,12 @@ switch  cfg.scoringformat
         scoremap.unknown   = '?';
 
         cfg.exclepochs = 'yes'; %use second column as excluded
+
+        %default set to '\t' above, set to ',' for csv
+        [~,~,ext_tmp]=fileparts(cfg.scoringfile);
+        if ismember(ext_tmp,{'.csv'})
+            cfg.columndelimiter = ',';
+        end
     case 'zmax'
         % ZMax exported csv
         scoremap = [];
@@ -615,8 +670,6 @@ switch  cfg.scoringformat
             scoremap = cfg.scoremap;
         end
 
-
-
         import javax.xml.xpath.*
 
         doc = xmlread(filename);
@@ -893,6 +946,53 @@ switch  cfg.scoringformat
         processTableStucture = true;
 
         readoption = 'json';
+    case {'sleepware_G3_csv'}
+
+        %scoring read specifications
+        scoremap = [];
+        scoremap.labelold  = {'WK', 'N1',  'N2',  'N3',  'REM'};
+        scoremap.labelnew  = {'W', 'N1', 'N2', 'N3', 'R'};
+        scoremap.unknown   = '?';
+
+        cfg.datatype='columns'; %use "columns" for table-like format, or "xml"
+        cfg.columndelimiter=',';
+        cfg.skiplines = 1; %header lines to be skipped
+        cfg.columnnum = 3; %column number containing sleep stage labels
+
+        %read event file if present
+        if isfield(cfg,'scoringeventsfile')
+            if isfile(cfg.scoringeventsfile)
+
+                tableRawEvents= readtable(cfg.scoringeventsfile,'FileType','text','ReadVariableNames',true,'Delimiter',',');
+                if ~isempty(tableRawEvents)
+
+                    %pre-read the scoring in order to get start time of the first epoch
+                    tmp_scoring = readtable(cfg.scoringfile,'FileType','text','ReadVariableNames',true,'Delimiter',',');
+                    scoring_startdatetime=tmp_scoring{1,'StartTime'};
+
+                    %adjust events table to include Sleeptrip fields
+                    tableRawEvents.event=tableRawEvents.Type;
+                    tableRawEvents.start=seconds(tableRawEvents.Time-scoring_startdatetime);
+                    tableRawEvents.duration = tableRawEvents.Duration;
+                    tableRawEvents.stop= tableRawEvents.start + tableRawEvents.duration;
+                    tableRawEvents.channel = repmat('all',size(tableRawEvents,1),1);
+
+                    %extract the arousal and events table
+                    tableArousal=tableRawEvents(strcmp(tableRawEvents.event,'Arousal'),{'event','start','stop','duration','channel'});
+                    if ~isempty(tableArousal)
+                        hasArousals = true;
+                    end
+                    tableEvents=tableRawEvents(~strcmp(tableRawEvents.event,'Arousal'),{'event','start','stop','duration','channel'});
+                    if ~isempty(tableArousal)
+                        hasEvents = true;
+                    end
+                    % tableArousal = tableArousal;
+                    %filename_arousals = []; % reset this again so no
+                end
+            end
+            %do not read the events file again later on
+            cfg.scoringeventsfile='';
+        end
 
     case {'sleeptrip'}
         readoption = 'loadmat';
@@ -1091,8 +1191,15 @@ if processTableStucture
 
 end
 
+%-------READ OPTIONAL STANDARDIZED AROUSAL, ARTIFACT, EVENT FILES----
+%--only works for standardized csv/tsv/txt files with columns event/start/stop/duration.channel
+
+%arousals
 if nargin<2
-    if ~isempty(filename_arousals)
+    if ~isempty(cfg.scoringarousalsfile)
+
+        filename_arousals=cfg.scoringarousalsfile;
+        [~,~,filename_arousals_ending]=fileparts(filename_arousals);
 
         switch filename_arousals_ending
             case '.tsv'
@@ -1101,34 +1208,41 @@ if nargin<2
                 tableArousal = readtable(filename_arousals,'FileType','text','ReadVariableNames',true);
         end
 
-        if ~ismember({'stop'}, tableArousal.Properties.VariableNames)
-            tableArousal.stop = tableArousal.start + tableArousal.duration;
-        end
+        if ~isempty(tableArousal)
+            if ~ismember({'stop'}, tableArousal.Properties.VariableNames)
+                tableArousal.stop = tableArousal.start + tableArousal.duration;
+            end
 
-        if ~ismember({'duration'}, tableArousal.Properties.VariableNames)
-            tableArousal.duration = tableArousal.stop - tableArousal.start;
-        end
+            if ~ismember({'duration'}, tableArousal.Properties.VariableNames)
+                tableArousal.duration = tableArousal.stop - tableArousal.start;
+            end
 
-        if ~ismember({'channel'}, tableArousal.Properties.VariableNames)
-            tableArousal.channel = repmat('all',size(tableArousal,1),1);
-        end
+            if ~ismember({'channel'}, tableArousal.Properties.VariableNames)
+                tableArousal.channel = repmat('all',size(tableArousal,1),1);
+            end
 
-        switch cfg.eventsoffset
-            case 'scoringonset'
-                tableArousal.start = tableArousal.start + scoring.dataoffset;
-                tableArousal.stop = tableArousal.stop + scoring.dataoffset;
+            switch cfg.eventsoffset
+                case 'scoringonset'
+                    tableArousal.start = tableArousal.start + scoring.dataoffset;
+                    tableArousal.stop = tableArousal.stop + scoring.dataoffset;
+            end
+            if isfield(scoring, 'arousals')
+                scoring.arousals = unique(cat(1,scoring.arousals,tableArousal));
+            else
+                scoring.arousals = tableArousal;
+            end
         end
-        if isfield(scoring, 'arousals')
-            scoring.arousals = unique(cat(1,scoring.arousals,tableArousal));
-        else
-            scoring.arousals = tableArousal;
-        end
-
     end
 end
 
+%artifacts
 if nargin<2
-    if ~isempty(filename_artifacts)
+    if ~isempty(cfg.scoringartifactfile)
+
+        filename_artifacts=cfg.scoringartifactfile;
+        [~,~,filename_artifacts_ending]=fileparts(filename_artifacts);
+
+
         switch filename_artifacts_ending
             case '.tsv'
                 tableArtifacts = readtable(filename_artifacts,'FileType','text','ReadVariableNames',true,'Delimiter','\t');
@@ -1136,35 +1250,39 @@ if nargin<2
                 tableArtifacts = readtable(filename_artifacts,'FileType','text','ReadVariableNames',true);
         end
 
-        if ~ismember({'stop'}, tableArtifacts.Properties.VariableNames)
-            tableArtifacts.stop = tableArtifacts.start + tableArtifacts.duration;
-        end
+        if ~isempty(tableArtifacts)
+            if ~ismember({'stop'}, tableArtifacts.Properties.VariableNames)
+                tableArtifacts.stop = tableArtifacts.start + tableArtifacts.duration;
+            end
 
-        if ~ismember({'duration'}, tableArtifacts.Properties.VariableNames)
-            tableArtifacts.duration = tableArtifacts.stop - tableArtifacts.start;
-        end
+            if ~ismember({'duration'}, tableArtifacts.Properties.VariableNames)
+                tableArtifacts.duration = tableArtifacts.stop - tableArtifacts.start;
+            end
 
-        if ~ismember({'channel'}, tableArtifacts.Properties.VariableNames)
-            tableArtifacts.channel = repmat('all',size(tableArtifacts,1),1);
-        end
+            if ~ismember({'channel'}, tableArtifacts.Properties.VariableNames)
+                tableArtifacts.channel = repmat('all',size(tableArtifacts,1),1);
+            end
 
-        switch cfg.eventsoffset
-            case 'scoringonset'
-                tableArtifacts.start = tableArtifacts.start + scoring.dataoffset;
-                tableArtifacts.stop = tableArtifacts.stop + scoring.dataoffset;
+            switch cfg.eventsoffset
+                case 'scoringonset'
+                    tableArtifacts.start = tableArtifacts.start + scoring.dataoffset;
+                    tableArtifacts.stop = tableArtifacts.stop + scoring.dataoffset;
+            end
+            if isfield(scoring, 'artifacts')
+                scoring.artifacts = unique(cat(1,scoring.artifacts,tableArtifacts));
+            else
+                scoring.artifacts = tableArtifacts;
+            end
         end
-        if isfield(scoring, 'artifacts')
-            scoring.artifacts = unique(cat(1,scoring.artifacts,tableArtifacts));
-        else
-            scoring.artifacts = tableArtifacts;
-        end
-
     end
 end
 
-
+%events
 if nargin<2
-    if ~isempty(filename_events)
+    if ~isempty(cfg.scoringeventsfile)
+
+        filename_events=cfg.scoringeventsfile;
+        [~,~,filename_events_ending]=fileparts(filename_events);
 
         switch filename_events_ending
             case '.tsv'
@@ -1173,29 +1291,30 @@ if nargin<2
                 tableEvents = readtable(filename_events,'FileType','text','ReadVariableNames',true);
         end
 
-        if ~ismember({'stop'}, tableEvents.Properties.VariableNames)
-            tableEvents.stop = tableEvents.start + tableEvents.duration;
-        end
+        if ~isempty(tableEvents)
+            if ~ismember({'stop'}, tableEvents.Properties.VariableNames)
+                tableEvents.stop = tableEvents.start + tableEvents.duration;
+            end
 
-        if ~ismember({'duration'}, tableEvents.Properties.VariableNames)
-            tableEvents.duration = tableEvents.stop - tableEvents.start;
-        end
+            if ~ismember({'duration'}, tableEvents.Properties.VariableNames)
+                tableEvents.duration = tableEvents.stop - tableEvents.start;
+            end
 
-        if ~ismember({'channel'}, tableEvents.Properties.VariableNames)
-            tableEvents.channel = repmat('all',size(tableEvents,1),1);
-        end
+            if ~ismember({'channel'}, tableEvents.Properties.VariableNames)
+                tableEvents.channel = repmat('all',size(tableEvents,1),1);
+            end
 
-        switch cfg.eventsoffset
-            case 'scoringonset'
-                tableEvents.start = tableEvents.start + scoring.dataoffset;
-                tableEvents.stop = tableEvents.stop + scoring.dataoffset;
+            switch cfg.eventsoffset
+                case 'scoringonset'
+                    tableEvents.start = tableEvents.start + scoring.dataoffset;
+                    tableEvents.stop = tableEvents.stop + scoring.dataoffset;
+            end
+            if isfield(scoring, 'events')
+                scoring.events = unique(cat(1,scoring.events,tableEvents));
+            else
+                scoring.events = tableEvents;
+            end
         end
-        if isfield(scoring, 'events')
-            scoring.events = unique(cat(1,scoring.events,tableEvents));
-        else
-            scoring.events = tableEvents;
-        end
-
     end
 end
 

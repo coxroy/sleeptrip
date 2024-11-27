@@ -45,6 +45,7 @@ function [cfg] = st_scorebrowser(cfg, data)
 %                                 should be highlighted (default = 'yes')
 %   cfg.precision               = the precision that the data is stored in, either 'single' or 'single_trial' (32bit float) or 'double' or 'double_trial' (64bit float) or 'original' (unchanged).
 %                                 Note that 'single_trial' and 'double_trial' only convert the data.trial to the desired precision (default = 'single_trial')
+%   cfg.title                   = title string used in figure windows (default: 'data')
 %
 %   ---channel presence---
 %   cfg.channel                 = cell-array with channel labels of channels to be plotted, see FT_CHANNELSELECTION (default: all channels present in data)
@@ -3985,8 +3986,8 @@ switch key
                         temppath = [cfg.outputfilespath];
 
 
-                        list_formats = {'SpiSOP/Schlafaus/sleepin','Zmax','Somnomedics English', 'FASST', 'SleepTrip'};
-                        list_formats_st = {'spisop','zmax','somnomedics_english','fasst','sleeptrip',};
+                        list_formats = {'Scorebrowser','SpiSOP/Schlafaus/sleepin','Zmax','Somnomedics English', 'FASST', 'SleepTrip'};
+                        list_formats_st = {'sleeptrip_scorebrowser_export','spisop','zmax','somnomedics_english','fasst','sleeptrip',};
                         [indx_file_formats, selected_file_format] = listdlg('ListString',list_formats,'SelectionMode','single','PromptString',{'Select a file format.',['Scoring will be converted to scoring standard = ' cfg.standard '.'],''},'InitialValue',1,'Name','File format');
 
                         scoringformat = list_formats_st{indx_file_formats};
@@ -4053,10 +4054,6 @@ switch key
                         end
                 end
 
-
-
-
-
                 answer_hyp = questdlg('Import as additional hypnogram?', ...
                     'Hypnogram import', ...
                     'No, replace primary', ...
@@ -4117,23 +4114,24 @@ switch key
 
                             opt.artdata = [];
 
-                            temp_ArtifactPath = [temp_hypnogramPath '.artifacts.tsv'];
-                            if exist(temp_ArtifactPath) == 2
-                                [o, c] = readArtifactFile(temp_ArtifactPath,opt,cfg,cfg.artifact_export_delimiter);
-                                opt = o;
-                                cfg = c;
-                                c = [];
-                                o = [];
+                            if isfield(temp_scoring,'artifacts')
+                                temp_ArtifactPath=temp_scoring.artifacts;
+                                [opt, cfg] = readArtifactFile(temp_ArtifactPath,opt,cfg,cfg.artifact_export_delimiter);
                             end
-
-                            temp_ArousalPath = [temp_hypnogramPath '.arousals.tsv'];
-                            if exist(temp_ArousalPath) == 2
-                                [o, c] = readArousalFile(temp_ArousalPath,opt,cfg,cfg.artifact_export_delimiter);
-                                opt = o;
-                                cfg = c;
-                                c = [];
-                                o = [];
+                            if isfield(temp_scoring,'arousals')
+                                temp_ArousalPath=temp_scoring.arousals;
+                                [opt, cfg] = readArousalFile(temp_ArousalPath,opt,cfg,cfg.artifact_export_delimiter);
                             end
+                            %                             temp_ArtifactPath = [temp_hypnogramPath '.artifacts.tsv'];
+                            %                             if exist(temp_ArtifactPath) == 2
+                            %                                 [opt, cfg] = readArtifactFile(temp_ArtifactPath,opt,cfg,cfg.artifact_export_delimiter);
+                            %                              end
+                            %
+                            %                             temp_ArousalPath = [temp_hypnogramPath '.arousals.tsv'];
+                            %                             if exist(temp_ArousalPath) == 2
+                            %                                 [opt, cfg] = readArousalFile(temp_ArousalPath,opt,cfg,cfg.artifact_export_delimiter);
+                            %
+                            %                             end
 
                             [temp_pathstr,temp_name,temp_ext] = fileparts(temp_hypnogramPath);
 
@@ -4220,20 +4218,24 @@ switch key
                     'Export Hypnogram as',...
                     tempfilepath);
                 if hyp_file_filterindex ~= 0
-                    [dummy_pathstr,dummy_name,temp_ext] = fileparts([hyp_file_path hyp_file_name]);
+                    [dummy_pathstr,hyp_file_root,temp_ext] = fileparts([hyp_file_path hyp_file_name]);
                     if strcmp(temp_ext,'.csv')
                         cfg.hypnogram_delimiter_autosave = ',';
                     else
                         cfg.hypnogram_delimiter_autosave = '\t';
                     end
 
+                    %save the different files
                     temp_hypnogramPath = [hyp_file_path hyp_file_name];
+                    temp_hypnogramPath = [hyp_file_path hyp_file_root temp_ext];
                     writeHypnogramFile(temp_hypnogramPath,cfg.hypn,cfg.hypnogram_delimiter_autosave);
 
                     temp_ArtifactPath = [hyp_file_path hyp_file_name '.artifacts.tsv'];
+                    temp_ArtifactPath = [hyp_file_path hyp_file_root '.artifacts' temp_ext];
                     writeArtifactFile(temp_ArtifactPath,opt,cfg.artifact_export_delimiter);
 
                     temp_ArousalPath = [hyp_file_path hyp_file_name '.arousals.tsv'];
+                    temp_ArousalPath = [hyp_file_path hyp_file_root '.arousals' temp_ext];
                     writeArousalFile(temp_ArousalPath,opt,cfg.artifact_export_delimiter);
 
                     [temp_pathstr,temp_name,temp_ext] = fileparts(temp_hypnogramPath);
@@ -8061,7 +8063,12 @@ end
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [opt, cfg] = readArtifactFile(filepath,opt,cfg,delimiter)
 
+if istable(filepath)
+    af=filepath;
+else
 af = dataset('File',[filepath],'Delimiter',delimiter);
+end
+
 if ~isempty(af)
     %unique(af.event)
     af.start = round(af.start*opt.fsample);
@@ -8132,7 +8139,12 @@ end
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [opt, cfg] = readArousalFile(filepath,opt,cfg,delimiter)
 
+if istable(filepath)
+    af=filepath;
+else
 af = dataset('File',[filepath],'Delimiter',delimiter);
+end
+
 if ~isempty(af)
     %unique(af.event)
     af.start = round(af.start*opt.fsample);
@@ -8165,7 +8177,7 @@ if ~isempty(af)
         artdata = [];
         artdata.trial{1}       = convert_event(artifact, 'boolvec', 'endsample', datendsample); % every artifact is a "channel"
         artdata.time{1}        = offset2time(0, opt.fsample, datendsample);
-        artdata.label          = 'arousal';
+        artdata.label          = {'arousal'};
         artdata.fsample        = opt.fsample;
         artdata.cfg.trl        = [1 datendsample 0];
 
