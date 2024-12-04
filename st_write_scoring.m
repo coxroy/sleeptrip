@@ -4,7 +4,7 @@ function filename = st_write_scoring(cfg, scoring)
 % Use as
 %   filepath = st_write_scoring(cfg, scoring)
 %
-% Configutation parameters
+% Configuration parameters
 %   cfg.filename         = string, path to the new montage (default =
 %   'scoring')
 %

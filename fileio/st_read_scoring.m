@@ -10,10 +10,12 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %
 %
 % The configuration structure needs to specify
-%   cfg.scoringfile      = string, the scoring file (and path)
+%   cfg.scoringfile      = string, the scoring file (including path)
 %   cfg.scoringformat    = string, the scoring file format
 %                          either:
-%                          'custom' with a scoremap file
+%                          'sleeptrip' for a SleepTrip scoring structure exported/saved as a Matlab .mat file
+%                          'sleeptrip_scorebrowser_export' for files exported using the scorebrowser (typically named *_hypn_export.txt/csv/tsv)
+%                          'custom' for custom files (requires scoremap)
 %                          'zmax'   for hypnodyne corp Zmax exported scoring
 %                                   files
 %                          'zmax_autoscored'   for hypnodyne corp Zmax exported scoring
@@ -49,12 +51,9 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 %                                   for .xml files exported from Nautus Embla® RemLogic™ PSG Software  with scorings and scoring events
 %                                   (note that cfg.scoremap can be
 %                                   defined to match the scoring)
-%                          'sleeptrip' for scoring files exported SleepTrip as a .mat
-%                                  containing a scoring structure
-%                                  (named 'scoring')
-%                          'sleeptrip_scorebrowser_export' for txt files exported using the scorebrowser (typically named *_hypn_export.txt)
 %                          'rythm_dreem_json' for scoring files from Rythm
 %                                  Dreem head wearable files
+%                           'sleepware_G3_csv' for csv files exported from G3 software
 %
 % optional paramters are
 %   cfg.standard         = string, scoring standard either 'aasm' or AASM
@@ -89,7 +88,7 @@ function [scoring] = st_read_scoring(cfg,tableScoring)
 % Alternatively one can specify a more general data format with datatype
 % with a configuration of only the following necessary options
 %   cfg.scoringfile      = string, the scoring file (and path)
-%   cfg.scoremap         = structure, a mapping from , see below
+%   cfg.scoremap         = structure, a mapping from the original sleep stage labels to SleepTrip stage labels, see below
 %
 % ...and additional options
 %   cfg.datatype         = string, either 'columns' (e.g. *.tsv, *.csv, *.txt)
@@ -281,7 +280,7 @@ if nargin<2
             arousals_file=[score_file_root '.arousals' fileendings{iFileending}];
             scoringarousalsfile=fullfile(score_path,arousals_file);
             if isfile(scoringarousalsfile)
-                cfg.scoringarousalsfile = fullfile(score_path,[score_file_root '.arousals' fileendings{iFileending}]); %RC: .arousals added after file extension (also for artifacts and events below)
+                cfg.scoringarousalsfile = scoringarousalsfile; %RC: .arousals added after file extension (also for artifacts and events below)
                 %filename_arousals = fetch_url(cfg.scoringarousalsfile);
                 ft_info('Using %s as arousal file.',arousals_file)
                 break
@@ -296,7 +295,7 @@ if nargin<2
             artifacts_file=[score_file_root '.artifacts' fileendings{iFileending}];
             scoringartifactfile=fullfile(score_path,artifacts_file);
             if isfile(scoringartifactfile)
-                cfg.scoringartifactfile = fullfile(score_path,artifacts_file);
+                cfg.scoringartifactfile = scoringartifactfile;
                 %filename_artifacts = fetch_url(cfg.scoringartifactfile);
                 ft_info('Using %s as artifact file.',artifacts_file)
                 break
@@ -311,9 +310,9 @@ if nargin<2
             events_file=[score_file_root '.events' fileendings{iFileending}];
             scoringeventfile=fullfile(score_path,events_file);
             if isfile(scoringeventfile)
-                cfg.scoringeventsfile = fullfile(score_path,scoringeventfile);
+                cfg.scoringeventsfile = scoringeventfile;
                 %filename_artifacts = fetch_url(cfg.scoringartifactfile);
-                ft_info('Using %s as artifact file.',artifacts_file)
+                ft_info('Using %s as event file.',events_file)
                 break
             end
         end
@@ -978,14 +977,20 @@ switch  cfg.scoringformat
                     tableRawEvents.channel = repmat('all',size(tableRawEvents,1),1);
 
                     %extract the arousal and events table
-                    tableArousal=tableRawEvents(strcmp(tableRawEvents.event,'Arousal'),{'event','start','stop','duration','channel'});
+                    %--events (keep ALL)
+                    %tableEvents=tableRawEvents(~strcmp(tableRawEvents.event,'Arousal'),{'event','start','stop','duration','channel'});
+                    tableEvents=tableRawEvents(:,{'event','start','stop','duration','channel'});
+                    if ~isempty(tableEvents)
+                        hasEvents = true;
+                    end
+
+                    %--arousals (exclude
+                    tableArousal=tableRawEvents(strcmpi(tableRawEvents.event,'arousal'),{'event','start','stop','duration','channel'});
                     if ~isempty(tableArousal)
                         hasArousals = true;
                     end
-                    tableEvents=tableRawEvents(~strcmp(tableRawEvents.event,'Arousal'),{'event','start','stop','duration','channel'});
-                    if ~isempty(tableArousal)
-                        hasEvents = true;
-                    end
+
+
                     % tableArousal = tableArousal;
                     %filename_arousals = []; % reset this again so no
                 end
