@@ -311,7 +311,7 @@ cfg.drawgrid_LineStyle = ft_getopt(cfg,'drawgrid_LineStyle', {':' '-' '-'});
 cfg.color_text_on_bg = ft_getopt(cfg,'color_text_on_bg', [0.75 0 0]); %previous value [0.8 0.8 0.8]
 
 
-cfg.markeventlabels        = ft_getopt(cfg, 'markeventlabels', {'Ev1','Ev2','Ev3','Ev4','Ev5'});
+cfg.markeventlabels        = ft_getopt(cfg, 'markeventlabels', {'Event'});
 
 %power and time-frequency
 cfg.display_power_spectrum = ft_getopt(cfg,'display_power_spectrum','no');
@@ -1484,7 +1484,7 @@ else
 end
 
 % collect the artifacts that have been detected from cfg.artfctdef.xxx.artifact
-artlabel = sort(fieldnames(cfg.artfctdef));
+artlabel = fieldnames(cfg.artfctdef); %removed sort to respect markeventlabels as provided
 sel      = zeros(size(artlabel));
 artifact = cell(size(artlabel));
 for i=1:length(artlabel)
@@ -4117,7 +4117,7 @@ switch key
                 %                 temp_epochLengthSamples = opt.trlvis(1, 2) - opt.trlvis(1, 1) + 1;
                 %                 nEpochs = floor(size(opt.orgdata.trial{1},2)/temp_epochLengthSamples);
                 data_duration_seconds = size(opt.orgdata.trial{1},2)/opt.orgdata.fsample;
-                nEpochs = floor(data_duration_seconds/cfg.epochlength);
+                nEpochs = ceil(data_duration_seconds/cfg.epochlength);
 
                 if (size(temp_hypn,1) > nEpochs)
                     msgbox(sprintf(['Wrong Hypnogram?\n' 'It is too long!\n' ' data: ' num2str(nEpochs) ' ep\n' ' import: ' num2str(size(temp_hypn,1)) ' ep\n' 'hypnogram will be truncated to data by cutting its tail']) ,'Wrong Hypnogram imported?', 'warn','modal');
@@ -4162,6 +4162,10 @@ switch key
                             if isfield(temp_scoring,'events')
                                 temp_EventPath=temp_scoring.events;
                                 [opt, cfg] = readArtifactFile(temp_EventPath,opt,cfg,cfg.artifact_export_delimiter);
+
+                                %ensure cfg.markeventlabels are kept
+                               opt.artdata.label = union(cfg.markeventlabels,opt.artdata.label,'stable');
+
                             end
 
                             if isfield(temp_scoring,'artifacts')
@@ -4261,8 +4265,12 @@ switch key
         if strcmp(cfg.doSleepScoring,'yes')
 
             try
+                    tempfilename='hypn_export';
 
-                tempfilepath = [cfg.outputfilespath 'hypn_export' '.txt'];
+                if isfield(cfg,'title')
+                    tempfilename=cfg.title;
+                end
+                tempfilepath = [cfg.outputfilespath  tempfilename '.csv'];
 
                 [hyp_file_name hyp_file_path hyp_file_filterindex] = uiputfile(...
                     {'*.txt;*.tsv;*.csv','Export formats (*.txt,*.tsv,*.csv)';...
@@ -4288,7 +4296,7 @@ switch key
                     temp_hypnogramPath = [hyp_file_path hyp_file_root temp_ext];
                     writeHypnogramFile(temp_hypnogramPath,cfg.hypn,cfg.hypnogram_delimiter_autosave);
 
-                    temp_EventPath = [hyp_file_path hyp_file_root '.events' temp_ext];
+                    temp_EventPath = [hyp_file_path hyp_file_root '_events' temp_ext];
                     writeEventFile(temp_EventPath,opt,cfg.artifact_export_delimiter);
 
                     %                     temp_ArtifactPath = [hyp_file_path hyp_file_root '.artifacts' temp_ext];
@@ -4539,7 +4547,9 @@ if strcmp(cfg.doSleepScoring,'yes')
     %     else
     %         ft_uilayout(h, 'tag', 'artifactui_button', 'string', ['artfct(' opt.artdata.label{opt.ftsel} ')']);
     %     end
+    try
     ft_uilayout(h, 'tag', 'artifactui_button', 'string', [opt.artdata.label{opt.ftsel}]);
+    end
 
 end
 uiresume(h);
@@ -6025,7 +6035,7 @@ if strcmp(cfg.doSleepScoring,'yes')
 
     delete(findobj(h,'tag', 'scorechan_eeg'));
 
-    for iChanDisplayed = temp_channel_number_in_curr_display;
+    for iChanDisplayed = temp_channel_number_in_curr_display
 
         if cfg.has_more_than_3_channels && istrue(cfg.highlight_scoring_channels)
             h_scorechan_eeg = ft_plot_box([tim(1) tim(end) -1 1],'facealpha',0.5, 'facecolor', cfg.score_channel_eeg_color , 'edgecolor', 'none', 'tag', 'scorechan_eeg',  ...
@@ -6136,7 +6146,7 @@ if strcmp(cfg.doSleepScoring,'yes')
 
     temp_channel_number_in_curr_display = find(chanindx == cfg.score_channel_eeg_frontal_number);
 
-    for iChanDisplayed = temp_channel_number_in_curr_display;
+    for iChanDisplayed = temp_channel_number_in_curr_display
         if cfg.has_more_than_3_channels && istrue(cfg.highlight_scoring_channels) && (cfg.score_channel_eeg_frontal_number ~= cfg.score_channel_eeg_number)
             h_scorechan_eeg_frontal = ft_plot_box([tim(1) tim(end) -1 1],'facealpha',0.5, 'facecolor', cfg.score_channel_eeg_frontal_color , 'edgecolor', 'none', 'tag', 'scorechan_eeg_frontal',  ...
                 'hpos', opt.laytime.pos(iChanDisplayed,1), 'vpos', opt.laytime.pos(iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1], 'axis', temp_ax);
@@ -6148,7 +6158,7 @@ if strcmp(cfg.doSleepScoring,'yes')
 
     temp_channel_number_in_curr_display = find(chanindx == cfg.score_channel_eeg_occipital_number);
 
-    for iChanDisplayed = temp_channel_number_in_curr_display;
+    for iChanDisplayed = temp_channel_number_in_curr_display
         if cfg.has_more_than_3_channels && istrue(cfg.highlight_scoring_channels) && (cfg.score_channel_eeg_occipital_number ~= cfg.score_channel_eeg_number)
             h_scorechan_eeg_occipital = ft_plot_box([tim(1) tim(end) -1 1],'facealpha',0.5, 'facecolor', cfg.score_channel_eeg_occipital_color , 'edgecolor', 'none', 'tag', 'scorechan_eeg_occipital',  ...
                 'hpos', opt.laytime.pos(iChanDisplayed,1), 'vpos', opt.laytime.pos(iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1], 'axis', temp_ax);
@@ -6160,7 +6170,7 @@ if strcmp(cfg.doSleepScoring,'yes')
 
     temp_channel_number_in_curr_display = find(chanindx == cfg.score_channel_eog_number);
 
-    for iChanDisplayed = temp_channel_number_in_curr_display;
+    for iChanDisplayed = temp_channel_number_in_curr_display
         if cfg.has_more_than_3_channels && istrue(cfg.highlight_scoring_channels)
             h_scorechan_eog = ft_plot_box([tim(1) tim(end) -1 1],'facealpha',0.5, 'facecolor', cfg.score_channel_eog_color , 'edgecolor', 'none', 'tag', 'scorechan_eog',  ...
                 'hpos', opt.laytime.pos(iChanDisplayed,1), 'vpos', opt.laytime.pos(iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1], 'axis', temp_ax);
@@ -6173,7 +6183,7 @@ if strcmp(cfg.doSleepScoring,'yes')
 
     temp_channel_number_in_curr_display = find(chanindx == cfg.score_channel_emg_number);
 
-    for iChanDisplayed = temp_channel_number_in_curr_display;
+    for iChanDisplayed = temp_channel_number_in_curr_display
         if cfg.has_more_than_3_channels && istrue(cfg.highlight_scoring_channels)
             h_scorechan_emg = ft_plot_box([tim(1) tim(end) -1 1],'facealpha',0.5, 'facecolor', cfg.score_channel_emg_color , 'edgecolor', 'none', 'tag', 'scorechan_emg',  ...
                 'hpos', opt.laytime.pos(iChanDisplayed,1), 'vpos', opt.laytime.pos(iChanDisplayed,2), 'width', opt.width, 'height', opt.laytime.height(iChanDisplayed), 'hlim', opt.hlim, 'vlim', [-1 1], 'axis', temp_ax);
@@ -6188,7 +6198,7 @@ if strcmp(cfg.doSleepScoring,'yes')
 
         temp_channel_number_in_curr_display = find(chanindx == cfg.score_channel_ecg_number);
 
-        for iChanDisplayed = temp_channel_number_in_curr_display;
+        for iChanDisplayed = temp_channel_number_in_curr_display
             if cfg.has_more_than_3_channels && istrue(cfg.highlight_scoring_channels)
 
                 h_scorechan_ecg = ft_plot_box([tim(1) tim(end) -1 1],'facealpha',0.3, 'facecolor', cfg.score_channel_ecg_color , 'edgecolor', 'none', 'tag', 'scorechan_ecg',  ...
@@ -6874,8 +6884,13 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                     %FW begin
                     %temp_tick = [.25 .75] .* range(opt.vlim./curr_scale(i)) + opt.vlim(1)./abs(curr_scale(i));
                     temp_tick = [.25 .75] .* (max(curr_range(i,:)) - min(curr_range(i,:))) + min(curr_range(i,:));
+                    %temp_tick = [0 0.5 1] .* (max(curr_range(i,:)) - min(curr_range(i,:))) + min(curr_range(i,:));
 
-                    yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),{temp_tick(1) temp_tick(2)},'UniformOutput',false));
+                    %yTick = temp_tick;
+                    %yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),{temp_tick(1) temp_tick(2)},'UniformOutput',false));
+
+                                        yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),num2cell(temp_tick),'UniformOutput',false));
+
                     yTickLabel = [yTickLabel {yTickLabel_temp}];
                     %yTickLabel = [yTickLabel {[.25 .75] .* temp_factor}];
                     %FW end

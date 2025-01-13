@@ -277,7 +277,7 @@ if nargin<2
     if ~isfile(cfg.scoringarousalsfile)
         ft_warning('No arousal file specified: searching for files matching scoring file')
         for iFileending = 1:numel(fileendings)
-            arousals_file=[score_file_root '.arousals' fileendings{iFileending}];
+            arousals_file=[score_file_root '_arousals' fileendings{iFileending}];
             scoringarousalsfile=fullfile(score_path,arousals_file);
             if isfile(scoringarousalsfile)
                 cfg.scoringarousalsfile = scoringarousalsfile; %RC: .arousals added after file extension (also for artifacts and events below)
@@ -292,7 +292,7 @@ if nargin<2
     if ~isfile(cfg.scoringartifactfile)
         ft_warning('No artifact file specified: searching for files matching scoring file')
         for iFileending = 1:numel(fileendings)
-            artifacts_file=[score_file_root '.artifacts' fileendings{iFileending}];
+            artifacts_file=[score_file_root '_artifacts' fileendings{iFileending}];
             scoringartifactfile=fullfile(score_path,artifacts_file);
             if isfile(scoringartifactfile)
                 cfg.scoringartifactfile = scoringartifactfile;
@@ -307,7 +307,7 @@ if nargin<2
     if ~isfile(cfg.scoringeventsfile)
         ft_warning('No event file specified: searching for files matching scoring file')
         for iFileending = 1:numel(fileendings)
-            events_file=[score_file_root '.events' fileendings{iFileending}];
+            events_file=[score_file_root '_events' fileendings{iFileending}];
             scoringeventfile=fullfile(score_path,events_file);
             if isfile(scoringeventfile)
                 cfg.scoringeventsfile = scoringeventfile;
