@@ -4163,9 +4163,6 @@ switch key
                                 temp_EventPath=temp_scoring.events;
                                 [opt, cfg] = readArtifactFile(temp_EventPath,opt,cfg,cfg.artifact_export_delimiter);
 
-                                %ensure cfg.markeventlabels are kept
-                               opt.artdata.label = union(cfg.markeventlabels,opt.artdata.label,'stable');
-
                             end
 
                             if isfield(temp_scoring,'artifacts')
@@ -4265,7 +4262,7 @@ switch key
         if strcmp(cfg.doSleepScoring,'yes')
 
             try
-                    tempfilename='hypn_export';
+                tempfilename='hypn_export';
 
                 if isfield(cfg,'title')
                     tempfilename=cfg.title;
@@ -4548,7 +4545,7 @@ if strcmp(cfg.doSleepScoring,'yes')
     %         ft_uilayout(h, 'tag', 'artifactui_button', 'string', ['artfct(' opt.artdata.label{opt.ftsel} ')']);
     %     end
     try
-    ft_uilayout(h, 'tag', 'artifactui_button', 'string', [opt.artdata.label{opt.ftsel}]);
+        ft_uilayout(h, 'tag', 'artifactui_button', 'string', [opt.artdata.label{opt.ftsel}]);
     end
 
 end
@@ -6889,7 +6886,7 @@ elseif any(strcmp(cfg.viewmode, {'vertical' 'component'}))
                     %yTick = temp_tick;
                     %yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),{temp_tick(1) temp_tick(2)},'UniformOutput',false));
 
-                                        yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),num2cell(temp_tick),'UniformOutput',false));
+                    yTickLabel_temp = cellfun(@str2num,cellfun(@(x) num2str(x,'%1.2f'),num2cell(temp_tick),'UniformOutput',false));
 
                     yTickLabel = [yTickLabel {yTickLabel_temp}];
                     %yTickLabel = [yTickLabel {[.25 .75] .* temp_factor}];
@@ -8169,13 +8166,18 @@ else
     af = dataset('File',[filepath],'Delimiter',delimiter);
 end
 
+%opt.artdata.label = union(cfg.markeventlabels,opt.artdata.label,'stable');
 if ~isempty(af)
-    %unique(af.event)
     af.start = round(af.start*opt.fsample)+1;
     af.stop = round(af.stop*opt.fsample)+1;
 
     % collect the artifacts that have been detected from cfg.artfctdef.xxx.artifact
-    artlabel = unique(af.event);
+    if isfield(cfg,'markeventlabels')
+        artlabel = union(cfg.markeventlabels,unique(af.event),'stable');
+    else
+        artlabel = unique(af.event);
+    end
+
     sel      = zeros(size(artlabel));
     artifact = cell(size(artlabel));
 
