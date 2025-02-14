@@ -12,7 +12,9 @@ function data=st_repair_artifacts(cfg_artifacts,data)
 %
 % Optional configuration parameters:
 %    cfg_artifacts.gridtypeforrepair = name of grid to use as the repair matrix. All grids present in cfg_artifacts.artifacts.grid are valid, including grids created manually. (default: 'repair_grid')
-%    cfg_artifacts.repairmethod = repair options 'interpolate','replacewithzero','replacewithnan'. (default: 'interpolate')
+%    cfg_artifacts.repairmethod = repair options 'interpolate' (inverse distance-weighted),'replacewithzero','replacewithnan'. (default: 'interpolate')
+%    cfg_artifacts.interpolationdistanceweighting = exponentiation factor for inverse distance-weighted interpolation, e.g. 1 -> (1./distance), 2 ->
+%    (1./(distance.^2)). (default: 5, based on non-exhaustive explorations)
 %    cfg_artifacts.smoothafterinterpolation = when repairmethod is 'interpolate', whether to smooth discontinuities across segment boundaries (default: 'yes')
 %    cfg_artifacts.smoothdatawindow = length of window centered on segment boundary, in seconds (default: 0.2 s)
 %    cfg_artifacts.smoothmethod = method used for smoothing: see Matlab's smoothdata options (default: 'gaussian')
@@ -74,6 +76,9 @@ repair_grid=cfg_grid.(cfg_artifacts.gridtypeforrepair); %get the requested grid
 cfg_artifacts.repairmethod= ft_getopt(cfg_artifacts,'repairmethod','interpolate');
 repair_method=cfg_artifacts.repairmethod;
 
+cfg_artifacts.interpolationdistanceweighting = ft_getopt(cfg_artifacts,'interpolationdistanceweighting',5);
+interp_exp=cfg_artifacts.interpolationdistanceweighting;
+
 %smoothing options
 cfg_artifacts.smoothafterinterpolation= ft_getopt(cfg_artifacts,'smoothafterinterpolation','yes');
 cfg_artifacts.smoothmethod=ft_getopt(cfg_artifacts,'smoothmethod','gaussian');
@@ -122,7 +127,7 @@ for segment_i=repairSegment_inds
                 repair(badInds(bad_i),badInds(bad_i))=0; %set diagonal of bad chan to 0
                 distance = sqrt(sum((elec.chanpos(goodInds, :) - repmat(elec.chanpos(badInds(bad_i), :), length(goodInds), 1)).^2, 2));
 
-                repair(badInds(bad_i), goodInds) = (1./distance);
+                repair(badInds(bad_i), goodInds) = (1./(distance.^interp_exp));
                 repair(badInds(bad_i), goodInds) = repair(badInds(bad_i), goodInds) ./ sum(repair(badInds(bad_i), goodInds));
             end
 

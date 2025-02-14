@@ -8,7 +8,7 @@ function [data] = st_select_data(cfg, data)
 %   [data] = st_select_data(cfg, data)
 %
 %  GENERAL optional parameters:
-%   cfg.minlength = minimal trial duration needed for selection (default: 30 seconds)
+%   cfg.minlength = minimal trial duration needed for selection (default: 0 seconds)
 %
 %  When providing a scoring:
 %   cfg.scoring  = a scoring structure as defined in ST_READ_SCORING
@@ -71,7 +71,7 @@ st_defaults
 
 %---input checks and defaults----
 %ft_checkconfig(cfg,'required',{'scoring'});
-cfg.minlength = ft_getopt(cfg, 'minlength',30); %default 30s (typical epoch length)
+cfg.minlength = ft_getopt(cfg, 'minlength',0); %default: 0 s (any data length allowed)
 
 cfg.usescoringexclusion = ft_getopt(cfg, 'usescoringexclusion', 'yes');
 
