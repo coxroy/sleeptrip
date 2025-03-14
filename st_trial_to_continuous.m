@@ -1,5 +1,15 @@
 function data=st_trial_to_continuous(cfg,data)
 
+% ST_TRIAL_TO_CONTINUOUS converts trial-based data into a (pseudo-)continuous dataset by concatenating the trials. By default, the time vector of the
+% resulting data is reset to start at t = 0 and increases continuously. Set cfg.resettime = 'no' to keep the original time vectors of the trials.
+%
+% Use as
+%   data = st_trial_to_continuous(cfg,data)
+% 
+%   cfg.resettime = 'yes' (default) or 'no'
+%
+% See also ST_CONCAT_WITH_PAD, FT_APPENDDATA
+
 cfg.resettime=ft_getopt(cfg, 'resettime', 'yes'); %remove gaps in time vector
 
 Nchans   = length(data.label);
