@@ -1,6 +1,7 @@
 function [cfg filepaths] = st_write_continuous_data(cfg, data)
 
-% ST_WRITE_CONTINUOUS_DATA writes data out in various standard sleep eeg formats
+% ST_WRITE_CONTINUOUS_DATA writes data out into various Brainvision and EDF sleep eeg formats.
+% Writing out events contained in data.event is supported ONLY for Brainvision formats.
 % Please do NOT save in sampling rates that divide 2^n\n(e.g. 64 ,128 ,
 % 256, 512, ...) NOR are divisible by 3 (e.g. 30, 300, 600)
 % PLEASE USE sampling rates like 50, 100, 125, 200, 500, 1000, 2000, 5000
@@ -139,6 +140,13 @@ hdr.nChans = length(data.label);
 hdr.label = data.label;
 hdr.nTrials = 1;
 
+%get events
+hasEvent=false;
+if isfield(data,'event')
+    hasEvent = true;
+    event=data.event;
+end
+
 % chose a file name (without extension)
 [pathstr, name, ext] = fileparts(cfg.filename);
 
@@ -183,7 +191,11 @@ switch cfg.format
         file_extension = ''; %brainvision exports do not have an extension
         % this is the final full file path
         data_export_filepath = [file_name file_extension];
-        ft_write_data(data_export_filepath, data.trial{:},'dataformat',data_format_output,'header',hdr);
+        if hasEvent
+            ft_write_data(data_export_filepath, data.trial{:},'dataformat',data_format_output,'header',hdr,'event',event);
+        else
+            ft_write_data(data_export_filepath, data.trial{:},'dataformat',data_format_output,'header',hdr);
+        end
         
         filepaths = {[data_export_filepath '.eeg'], [data_export_filepath '.vhdr'], [data_export_filepath '.vmrk']};
         

@@ -5,7 +5,7 @@ function data_concat = st_concat_with_pad(cfg)
 %
 % Use as
 %   data_concat = st_concat_with_pad(cfg)
-% 
+%
 %   cfg.datas = [required] a cell array containing at least two FieldTrip datasets that are consistently organized (e.g., channels, sample rate)
 %   cfg.postpadseconds = [optional] vector with number of seconds to zero-pad after each dataset (should match number of datasets in cfg.datas, default: all 0 -> direct concatenation)
 %
@@ -42,7 +42,7 @@ pad_samples= pad_seconds.*fsample;
 %create zero-padded datasets of requested lengths
 datas_pad={};
 for data_i=1:num_data_sets
-    
+
     %raw data
     Nsamples=pad_samples(data_i);
     dat = zeros(Nchans,Nsamples);
@@ -61,8 +61,10 @@ for data_i=1:num_data_sets
 end
 
 %interleave original and padded data
-datas_all=[datas_ori;datas_pad];
+datas_all=[datas_ori(:)';datas_pad(:)'];
 datas_all=datas_all(:)';
+
+num_data_sets_all=length(datas_all);
 
 %concatenate into single dataset (but separate trials)
 cfg=[];
@@ -72,3 +74,37 @@ data_concat=ft_appenddata(cfg,datas_all{:});
 %merge the trials
 cfg=[];
 data_concat=st_trial_to_continuous(cfg,data_concat);
+
+%handle the events
+datas_all_Nsamples = cellfun(@(X) length(X.time{1}),datas_all);
+sumSamples=cumsum(datas_all_Nsamples);
+
+events_add=[];
+for dat_i=1:num_data_sets_all
+
+    if isfield(datas_all{dat_i},'event')
+        events_tmp=datas_all{dat_i}.event;
+        %from second dataaset onward...
+        if dat_i>1
+            %..shift each event sample
+            for i=1:length(events_tmp)
+                events_tmp(i).sample=events_tmp(i).sample + sumSamples(dat_i-1);
+            end
+        end
+        %append to previous
+        events_add=cat(2,events_add,events_tmp);
+    end
+end
+
+%check timing
+%events_add_table=struct2table(events_add);
+%events_add_table.time_min=(events_add_table.sample-1)/fsample/60;
+
+%add new events, otherwise remove old events to prevent confusion
+if ~isempty(events_add)
+    data_concat.event=events_add;
+else
+    if isfield(data_concat,'event')
+        data_concat=rmfield(data_concat,'event');
+    end
+end
