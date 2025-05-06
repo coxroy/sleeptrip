@@ -963,6 +963,14 @@ switch  cfg.scoringformat
             if isfile(cfg.scoringeventsfile)
 
                 tableRawEvents= readtable(cfg.scoringeventsfile,'FileType','text','ReadVariableNames',true,'Delimiter',',');
+                tableRawEvents.Time.Format='default'; %get rid of am/pm notation and show date (defaults to today's)
+
+                %fix possible midnight crossing
+                ind_crossmidnight=find(diff(hour(tableRawEvents.Time))<0,1,'first') + 1;
+                if ind_crossmidnight <= height(tableRawEvents)
+                    tableRawEvents{ind_crossmidnight:end,'Time'} = tableRawEvents{ind_crossmidnight:end,'Time'} + days(1);
+                end
+
                 if ~isempty(tableRawEvents)
 
                     %pre-read the scoring in order to get start time of the first epoch
